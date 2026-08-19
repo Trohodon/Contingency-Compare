@@ -215,7 +215,6 @@ ROW_FILTER_KEEP_VALUES = THERMAL_VIOLATION_CATEGORIES | VOLTAGE_VIOLATION_CATEGO
 EXCLUDED_CONTINGENCY_NAME_PATTERNS = {
     "+ Cross230kV",
     "_A-R",
-    "P5_Cross230",
 }
 EXCLUDED_VOLTAGE_RESULTING_ISSUES = {"1", "2"}
 
@@ -297,8 +296,8 @@ def _normalize_resulting_issue(value) -> str:
 
 def apply_voltage_resulting_issue_exclusion(df, enabled: bool = False, log_func=None):
     """
-    For voltage reports, remove rows whose Resulting Issue/LimViolID is exactly
-    1 or 2, which represent 33 kV and 46 kV issues.
+    For voltage reports, remove rows whose Resulting Issue/LimViolID starts
+    with 1 or 2, which represent 33 kV and 46 kV issues.
     """
     if not enabled or df is None or df.empty:
         return df, 0
@@ -310,7 +309,7 @@ def apply_voltage_resulting_issue_exclusion(df, enabled: bool = False, log_func=
 
     before = len(df)
     issue_values = df["LimViolID"].apply(_normalize_resulting_issue)
-    mask = issue_values.isin(EXCLUDED_VOLTAGE_RESULTING_ISSUES)
+    mask = issue_values.str.startswith(tuple(EXCLUDED_VOLTAGE_RESULTING_ISSUES), na=False)
     filtered_df = df[~mask].copy()
     removed = before - len(filtered_df)
     return filtered_df, removed
