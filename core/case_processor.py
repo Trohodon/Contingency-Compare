@@ -163,7 +163,7 @@ def post_process_csv(
             log_func(f"Rows removed by row filter: {removed_rows}")
 
         if log_func and skip_voltage_46_33kv:
-            log_func('\nSkipping voltage Resulting Issues "1" and "2" (46 kV / 33 kV)...')
+            log_func('\nSkipping voltage Resulting Issues starting with "1" or "2" (46 kV / 33 kV)...')
 
         filtered_data, removed_voltage_level_rows = apply_voltage_resulting_issue_exclusion(
             filtered_data,
