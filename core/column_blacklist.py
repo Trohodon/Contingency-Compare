@@ -204,7 +204,13 @@ def apply_blacklist(df):
 
 ROW_FILTER_ENABLED = True
 ROW_FILTER_COLUMN = "LimViolCat"
-ROW_FILTER_KEEP_VALUES = {"Branch MVA"}
+THERMAL_VIOLATION_CATEGORIES = {"Branch MVA"}
+VOLTAGE_VIOLATION_CATEGORIES = {
+    "Bus Low Volts",
+    "Bus High Volts",
+    "Change Bus High Volts",
+}
+ROW_FILTER_KEEP_VALUES = THERMAL_VIOLATION_CATEGORIES | VOLTAGE_VIOLATION_CATEGORIES
 
 
 def apply_row_filter(df, keep_values=None, log_func=None):
