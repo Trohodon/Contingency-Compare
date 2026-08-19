@@ -535,10 +535,6 @@ class CaseProcessingTab(ttk.Frame):
             log_func=self.log,
             threshold=threshold,
             report_type=self.report_type_var.get(),
-            skip_voltage_46_33kv=(
-                self.report_type_var.get() == "voltage"
-                and self.skip_voltage_46_33kv_var.get()
-            ),
         )
 
         if workbook_path:
