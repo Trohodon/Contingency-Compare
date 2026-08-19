@@ -61,7 +61,7 @@ def _is_voltage_row(row) -> bool:
 
 
 def _limit_or_value_for_display(row, field_name: str, report_type: str):
-    digits = 2 if report_type == "voltage" or _is_voltage_row(row) else 1
+    digits = 3 if report_type == "voltage" or _is_voltage_row(row) else 1
     if hasattr(row, "get"):
         return _round_if_numeric(row.get(field_name, ""), digits)
     return _round_if_numeric(getattr(row, field_name, ""), digits)
@@ -76,7 +76,7 @@ def _pct_for_display(row, report_type: str):
 
 
 def _number_format_for_report(report_type: str) -> str:
-    return "0.00" if report_type == "voltage" else "0.0"
+    return "0.000" if report_type == "voltage" else "0.0"
 
 
 def _filter_by_percent_threshold(df: pd.DataFrame, threshold: float) -> pd.DataFrame:
@@ -253,7 +253,7 @@ def build_workbook(
         if report_type == "thermal":
             log_func("Sorting Resulting Issues by highest Percent Loading (worst first).")
         else:
-            log_func("Voltage report values are displayed in p.u. to two decimals.")
+            log_func("Voltage report values are displayed in p.u. to three decimals.")
         log_func("Shifting output down by 1 row (blank Row 1).")
 
     wb = Workbook()
