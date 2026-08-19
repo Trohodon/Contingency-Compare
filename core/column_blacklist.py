@@ -217,6 +217,7 @@ EXCLUDED_CONTINGENCY_NAME_PATTERNS = {
     "_A-R",
     "P5_Cross230",
 }
+EXCLUDED_VOLTAGE_RESULTING_ISSUES = {"1", "2"}
 
 
 def apply_row_filter(df, keep_values=None, log_func=None):
@@ -272,6 +273,44 @@ def apply_contingency_name_exclusion(df, log_func=None):
     for pattern in EXCLUDED_CONTINGENCY_NAME_PATTERNS:
         mask = mask | labels.str.contains(pattern, case=False, regex=False)
 
+    filtered_df = df[~mask].copy()
+    removed = before - len(filtered_df)
+    return filtered_df, removed
+
+
+def _normalize_resulting_issue(value) -> str:
+    try:
+        if pd.isna(value):
+            return ""
+    except Exception:
+        pass
+
+    text = str(value).strip()
+    try:
+        numeric = float(text)
+        if numeric.is_integer():
+            return str(int(numeric))
+    except Exception:
+        pass
+    return text
+
+
+def apply_voltage_resulting_issue_exclusion(df, enabled: bool = False, log_func=None):
+    """
+    For voltage reports, remove rows whose Resulting Issue/LimViolID is exactly
+    1 or 2, which represent 33 kV and 46 kV issues.
+    """
+    if not enabled or df is None or df.empty:
+        return df, 0
+
+    if "LimViolID" not in df.columns:
+        if log_func:
+            log_func("WARNING: Voltage resulting issue exclusion skipped because 'LimViolID' was not found.")
+        return df, 0
+
+    before = len(df)
+    issue_values = df["LimViolID"].apply(_normalize_resulting_issue)
+    mask = issue_values.isin(EXCLUDED_VOLTAGE_RESULTING_ISSUES)
     filtered_df = df[~mask].copy()
     removed = before - len(filtered_df)
     return filtered_df, removed
