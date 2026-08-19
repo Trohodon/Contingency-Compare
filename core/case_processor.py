@@ -6,6 +6,7 @@ from .column_blacklist import (
     apply_blacklist,
     apply_row_filter,
     apply_limviolid_max_filter,
+    apply_contingency_name_exclusion,
 )
 
 REQUIRED_FILTERED_COLUMNS = [
@@ -135,6 +136,17 @@ def post_process_csv(
         # Data rows are index >= 1
         data = raw.iloc[1:].copy()
         data.columns = header_row
+
+        if log_func:
+            log_func('\nRemoving excluded contingencies containing "+ Cross230kV"...')
+
+        data, removed_excluded_contingencies = apply_contingency_name_exclusion(
+            data,
+            log_func=log_func,
+        )
+
+        if log_func:
+            log_func(f"Rows removed by contingency name exclusion: {removed_excluded_contingencies}")
 
         # 1) Row filter with chosen categories
         if log_func:
