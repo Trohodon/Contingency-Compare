@@ -2,7 +2,10 @@ import os
 import pandas as pd
 
 from .case_types import CANONICAL_TO_PRETTY, TARGET_PATTERNS
-from .column_blacklist import VOLTAGE_VIOLATION_CATEGORIES
+from .column_blacklist import (
+    VOLTAGE_VIOLATION_CATEGORIES,
+    apply_contingency_name_exclusion,
+)
 
 # Try to import openpyxl for formatting + outline grouping
 try:
@@ -148,6 +151,7 @@ def _build_simple_workbook(
                         try:
                             df = pd.read_csv(csv_path)
                             df.insert(0, "CaseType", label)
+                            df, _ = apply_contingency_name_exclusion(df, log_func=log_func)
                             if report_type == "thermal":
                                 df = _filter_by_percent_threshold(df, threshold)
                             if "Notes" not in df.columns:
@@ -225,6 +229,7 @@ def build_workbook(
             try:
                 df = pd.read_csv(csv_path)
                 df.insert(0, "CaseType", label)
+                df, _ = apply_contingency_name_exclusion(df, log_func=log_func)
                 dfs.append(df)
             except Exception as e:
                 if log_func:
