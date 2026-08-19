@@ -35,6 +35,7 @@ class CaseProcessingTab(ttk.Frame):
         # NOTE: v2 meaning: "Expandable issue view" (not true dedup)
         self.max_filter_var = tk.BooleanVar(value=True)
         self.report_type_var = tk.StringVar(value="thermal")
+        self.skip_voltage_46_33kv_var = tk.BooleanVar(value=True)
         self.delete_original_var = tk.BooleanVar(value=True)
         self.threshold_var = tk.StringVar(value="80")
 
@@ -144,13 +145,23 @@ class CaseProcessingTab(ttk.Frame):
         self.threshold_entry = ttk.Entry(mode_row, textvariable=self.threshold_var, width=7)
         self.threshold_entry.pack(side=tk.LEFT, padx=(6, 0))
 
+        voltage_row = ttk.Frame(filters)
+        voltage_row.grid(row=2, column=0, sticky="w", padx=5, pady=2)
+
         ttk.Radiobutton(
-            filters,
+            voltage_row,
             text='Voltage ("Bus Low Volts", "Bus High Volts", "Change Bus High Volts")',
             variable=self.report_type_var,
             value="voltage",
             command=self._sync_filter_controls,
-        ).grid(row=2, column=0, sticky="w", padx=5, pady=2)
+        ).pack(side=tk.LEFT)
+
+        self.skip_voltage_46_33kv_check = ttk.Checkbutton(
+            voltage_row,
+            text="Skip 46kV & 33kV",
+            variable=self.skip_voltage_46_33kv_var,
+        )
+        self.skip_voltage_46_33kv_check.pack(side=tk.LEFT, padx=(14, 0))
 
         ttk.Checkbutton(
             filters,
@@ -191,8 +202,10 @@ class CaseProcessingTab(ttk.Frame):
 
     def _sync_filter_controls(self):
         state = "normal" if self.report_type_var.get() == "thermal" else "disabled"
+        voltage_state = "normal" if self.report_type_var.get() == "voltage" else "disabled"
         try:
             self.threshold_entry.configure(state=state)
+            self.skip_voltage_46_33kv_check.configure(state=voltage_state)
         except Exception:
             pass
 
@@ -298,6 +311,10 @@ class CaseProcessingTab(ttk.Frame):
                 delete_original=self.delete_original_var.get(),
                 log_func=self.log,
                 threshold=threshold,
+                skip_voltage_46_33kv=(
+                    self.report_type_var.get() == "voltage"
+                    and self.skip_voltage_46_33kv_var.get()
+                ),
             )
         except Exception as e:
             self.log(f"ERROR: {e}")
@@ -422,6 +439,10 @@ class CaseProcessingTab(ttk.Frame):
                     delete_original=self.delete_original_var.get(),
                     log_func=self.log,
                     threshold=threshold,
+                    skip_voltage_46_33kv=(
+                        self.report_type_var.get() == "voltage"
+                        and self.skip_voltage_46_33kv_var.get()
+                    ),
                 )
                 if not filtered_csv:
                     raise RuntimeError("No filtered CSV was created.")
@@ -488,6 +509,10 @@ class CaseProcessingTab(ttk.Frame):
                         delete_original=self.delete_original_var.get(),
                         log_func=self.log,
                         threshold=threshold,
+                        skip_voltage_46_33kv=(
+                            self.report_type_var.get() == "voltage"
+                            and self.skip_voltage_46_33kv_var.get()
+                        ),
                     )
                     if not filtered_csv:
                         raise RuntimeError("No filtered CSV was created.")
@@ -510,6 +535,10 @@ class CaseProcessingTab(ttk.Frame):
             log_func=self.log,
             threshold=threshold,
             report_type=self.report_type_var.get(),
+            skip_voltage_46_33kv=(
+                self.report_type_var.get() == "voltage"
+                and self.skip_voltage_46_33kv_var.get()
+            ),
         )
 
         if workbook_path:
