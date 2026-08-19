@@ -262,6 +262,10 @@ class CaseProcessingTab(ttk.Frame):
         if not cats:
             self.log("WARNING: No LimViolCat categories selected. Row filter will be skipped.")
 
+        threshold = self._get_threshold()
+        if threshold is None:
+            return
+
         self._set_running(True)
         try:
             self.update_idletasks()
@@ -273,6 +277,7 @@ class CaseProcessingTab(ttk.Frame):
                 keep_categories=cats,
                 delete_original=self.delete_original_var.get(),
                 log_func=self.log,
+                threshold=threshold,
             )
         except Exception as e:
             self.log(f"ERROR: {e}")
@@ -357,13 +362,13 @@ class CaseProcessingTab(ttk.Frame):
             else:
                 _, target_cases = scan_folder(root, self.log)
                 self.target_cases = target_cases
-                self._run_export_single_folder(root, cats)
+                self._run_export_single_folder(root, cats, threshold)
         finally:
             self._set_running(False)
 
     # ---------- Single-folder mode ---------- #
 
-    def _run_export_single_folder(self, folder: str, cats):
+    def _run_export_single_folder(self, folder: str, cats, threshold: float):
         if not self.target_cases:
             messagebox.showwarning(
                 "No target cases found",
@@ -372,6 +377,7 @@ class CaseProcessingTab(ttk.Frame):
             return
 
         self.log("\n=== Batch processing ACCA/DC cases in folder ===")
+        self.log(f"Percent loading threshold: {threshold:.2f}%")
 
         errors = []
         for label in TARGET_PATTERNS:
@@ -392,6 +398,7 @@ class CaseProcessingTab(ttk.Frame):
                     keep_categories=cats,
                     delete_original=self.delete_original_var.get(),
                     log_func=self.log,
+                    threshold=threshold,
                 )
                 if not filtered_csv:
                     raise RuntimeError("No filtered CSV was created.")
@@ -454,6 +461,7 @@ class CaseProcessingTab(ttk.Frame):
                         keep_categories=cats,
                         delete_original=self.delete_original_var.get(),
                         log_func=self.log,
+                        threshold=threshold,
                     )
                     if not filtered_csv:
                         raise RuntimeError("No filtered CSV was created.")
