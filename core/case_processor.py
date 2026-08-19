@@ -7,6 +7,7 @@ from .column_blacklist import (
     apply_row_filter,
     apply_limviolid_max_filter,
     apply_contingency_name_exclusion,
+    apply_voltage_resulting_issue_exclusion,
 )
 
 REQUIRED_FILTERED_COLUMNS = [
@@ -83,6 +84,7 @@ def post_process_csv(
     keep_categories,
     log_func=None,
     threshold: float = 0.0,
+    skip_voltage_46_33kv: bool = False,
 ) -> str:
     """
     Apply:
@@ -138,7 +140,7 @@ def post_process_csv(
         data.columns = header_row
 
         if log_func:
-            log_func('\nRemoving excluded contingencies containing "+ Cross230kV"...')
+            log_func("\nRemoving configured excluded contingencies...")
 
         data, removed_excluded_contingencies = apply_contingency_name_exclusion(
             data,
@@ -159,6 +161,18 @@ def post_process_csv(
 
         if log_func:
             log_func(f"Rows removed by row filter: {removed_rows}")
+
+        if log_func and skip_voltage_46_33kv:
+            log_func('\nSkipping voltage Resulting Issues "1" and "2" (46 kV / 33 kV)...')
+
+        filtered_data, removed_voltage_level_rows = apply_voltage_resulting_issue_exclusion(
+            filtered_data,
+            enabled=skip_voltage_46_33kv,
+            log_func=log_func,
+        )
+
+        if log_func and skip_voltage_46_33kv:
+            log_func(f"Rows removed by voltage level exclusion: {removed_voltage_level_rows}")
 
         # 1b) Percent loading threshold before sorting/deduping.
         if log_func:
@@ -219,6 +233,7 @@ def process_case(
     delete_original: bool,
     log_func=None,
     threshold: float = 0.0,
+    skip_voltage_46_33kv: bool = False,
 ) -> str:
     """
     Full pipeline for a single .pwb:
@@ -243,6 +258,7 @@ def process_case(
         keep_categories,
         log_func,
         threshold=threshold,
+        skip_voltage_46_33kv=skip_voltage_46_33kv,
     )
 
     if delete_original and filtered_csv and os.path.exists(csv_out):
