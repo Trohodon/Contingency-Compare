@@ -8,12 +8,46 @@ from .column_blacklist import (
     apply_limviolid_max_filter,
 )
 
+REQUIRED_FILTERED_COLUMNS = [
+    "CTGLabel",
+    "LimViolID",
+    "LimViolLimit",
+    "LimViolValue",
+    "LimViolPct",
+    "LimViolCat",
+]
+
 
 def _make_filtered_path(original_csv: str) -> str:
     base, ext = os.path.splitext(original_csv)
     if not ext:
         ext = ".csv"
     return f"{base}_Filtered{ext}"
+
+
+def _ensure_required_columns(df: pd.DataFrame) -> pd.DataFrame:
+    out = df.copy()
+    for col in REQUIRED_FILTERED_COLUMNS:
+        if col not in out.columns:
+            out[col] = None
+    return out
+
+
+def _save_filtered_csv(csv_path: str, filtered_data: pd.DataFrame, log_func=None) -> str:
+    filtered_csv = _make_filtered_path(csv_path)
+    filtered_data = _ensure_required_columns(filtered_data)
+    filtered_data.to_csv(filtered_csv, index=False)
+
+    if log_func:
+        log_func(f"Filtered CSV saved to:\n  {filtered_csv}")
+        if filtered_data.empty:
+            log_func("Filtered CSV has no violation rows.")
+        else:
+            log_func("\nPreview of first few filtered data rows:")
+            preview = filtered_data.head(10).to_string(index=False)
+            log_func(preview)
+
+    return filtered_csv
 
 
 def _to_float_series(series: pd.Series) -> pd.Series:
@@ -81,8 +115,9 @@ def post_process_csv(
 
         if raw.shape[0] <= 1:
             if log_func:
-                log_func("No data rows found after header row; nothing to filter.")
-            return None
+                log_func("No data rows found after header row; creating empty filtered CSV.")
+            empty = pd.DataFrame(columns=header_row)
+            return _save_filtered_csv(csv_path, empty, log_func=log_func)
 
         # Data rows are index >= 1
         data = raw.iloc[1:].copy()
@@ -144,16 +179,7 @@ def post_process_csv(
                 log_func("No columns matched blacklist; no columns removed.")
 
         # Save filtered CSV
-        filtered_csv = _make_filtered_path(csv_path)
-        filtered_data.to_csv(filtered_csv, index=False)
-
-        if log_func:
-            log_func(f"Filtered CSV saved to:\n  {filtered_csv}")
-            log_func("\nPreview of first few filtered data rows:")
-            preview = filtered_data.head(10).to_string(index=False)
-            log_func(preview)
-
-        return filtered_csv
+        return _save_filtered_csv(csv_path, filtered_data, log_func=log_func)
 
     except Exception as e:
         if log_func:
