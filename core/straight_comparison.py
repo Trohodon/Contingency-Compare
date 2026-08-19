@@ -337,6 +337,7 @@ def _apply_table_styles(ws: Worksheet, num_cases: int):
     # Scenario % columns start at E now
     for i in range(num_cases):
         ws.column_dimensions[get_column_letter(5 + i)].width = 12
+    ws.column_dimensions[get_column_letter(5 + num_cases)].width = 35  # Notes
 
     try:
         ws.sheet_properties.outlinePr.summaryBelow = False
@@ -361,7 +362,7 @@ def _write_title_row(ws: Worksheet, row: int, title: str, last_col: int):
 
 
 def _write_header_row(ws: Worksheet, row: int, case_labels: Sequence[str]):
-    headers = ["Contingency Events", "Resulting Issue", "Limit"] + list(case_labels)
+    headers = ["Contingency Events", "Resulting Issue", "Limit"] + list(case_labels) + ["Notes"]
     for col_offset, header in enumerate(headers):
         cell = ws.cell(row=row, column=2 + col_offset)
         cell.value = header
@@ -440,33 +441,43 @@ def write_formatted_straight_sheet(
     ws = wb.create_sheet(title=ws_name)
     _apply_table_styles(ws, num_cases=len(case_labels))
 
-    if df is None or df.empty:
-        ws.cell(row=2, column=2).value = "None"
-        ws.cell(row=2, column=3).value = "No Voltage Issues"
-        return
+    if df is None:
+        df = pd.DataFrame()
+    for col in ("CaseType", "Contingency", "ResultingIssue", "Limit"):
+        if col not in df.columns:
+            df = df.copy()
+            df[col] = None
+    if "Notes" not in df.columns:
+        df = df.copy()
+        df["Notes"] = ""
 
     current_row = 2
     case_cols = list(case_labels)
 
-    # Columns: B..(D + num_cases)  => last_col = 4 + num_cases
-    last_col = 4 + len(case_cols)
+    # Columns: B..(E + num_cases)  => last_col = 5 + num_cases
+    last_col = 5 + len(case_cols)
 
     for case_type_pretty in CANONICAL_TO_PRETTY.values():
         sub = df[df["CaseType"] == case_type_pretty].copy()
-        if sub.empty:
-            continue
 
         _write_title_row(ws, current_row, case_type_pretty, last_col=last_col)
         current_row += 1
         _write_header_row(ws, current_row, case_cols)
         current_row += 1
 
+        if sub.empty:
+            vals = ["None", "No Voltage Issues", None] + [None for _ in case_cols] + [""]
+            _write_row(ws, current_row, vals)
+            current_row += 2
+            continue
+
         if not expandable_issue_view:
             for _, r in sub.iterrows():
                 cont = str(r.get("Contingency", "") or "")
                 issue = str(r.get("ResultingIssue", "") or "")
                 limit = r.get("Limit", None)
-                vals = [cont, issue, limit] + [r.get(c, None) for c in case_cols]
+                notes = str(r.get("Notes", "") or "")
+                vals = [cont, issue, limit] + [r.get(c, None) for c in case_cols] + [notes]
                 _write_row(ws, current_row, vals)
                 current_row += 1
             current_row += 1
@@ -491,8 +502,9 @@ def write_formatted_straight_sheet(
                 issue = str(r.get("ResultingIssue", "") or "")
                 issue_display = issue if first else ""
                 limit = r.get("Limit", None)
+                notes = str(r.get("Notes", "") or "")
 
-                vals = [cont, issue_display, limit] + [r.get(c, None) for c in case_cols]
+                vals = [cont, issue_display, limit] + [r.get(c, None) for c in case_cols] + [notes]
 
                 if first:
                     summary_row_index = current_row
