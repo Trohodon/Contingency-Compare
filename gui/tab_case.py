@@ -5,6 +5,10 @@ from tkinter import ttk, filedialog, messagebox
 from core.case_finder import scan_folder, TARGET_PATTERNS
 from core.case_processor import process_case
 from core.comparison_builder import build_workbook
+from core.column_blacklist import (
+    THERMAL_VIOLATION_CATEGORIES,
+    VOLTAGE_VIOLATION_CATEGORIES,
+)
 
 
 class CaseProcessingTab(ttk.Frame):
@@ -31,7 +35,7 @@ class CaseProcessingTab(ttk.Frame):
         # NOTE: v2 meaning: "Expandable issue view" (not true dedup)
         self.max_filter_var = tk.BooleanVar(value=True)
         self.branch_mva_var = tk.BooleanVar(value=True)
-        self.bus_lv_var = tk.BooleanVar(value=False)
+        self.bus_lv_var = tk.BooleanVar(value=True)
         self.delete_original_var = tk.BooleanVar(value=False)
         self.threshold_var = tk.StringVar(value="80")
 
@@ -128,13 +132,13 @@ class CaseProcessingTab(ttk.Frame):
 
         ttk.Checkbutton(
             filters,
-            text='Include "Branch MVA" rows',
+            text='Include thermal loading rows ("Branch MVA")',
             variable=self.branch_mva_var,
         ).grid(row=1, column=0, sticky="w", padx=5, pady=2)
 
         ttk.Checkbutton(
             filters,
-            text='Include "Bus Low Volts" rows',
+            text='Include voltage rows ("Bus Low Volts", "Bus High Volts", "Change Bus High Volts")',
             variable=self.bus_lv_var,
         ).grid(row=2, column=0, sticky="w", padx=5, pady=2)
 
@@ -171,9 +175,9 @@ class CaseProcessingTab(ttk.Frame):
     def _get_row_filter_categories(self):
         cats = set()
         if self.branch_mva_var.get():
-            cats.add("Branch MVA")
+            cats.update(THERMAL_VIOLATION_CATEGORIES)
         if self.bus_lv_var.get():
-            cats.add("Bus Low Volts")
+            cats.update(VOLTAGE_VIOLATION_CATEGORIES)
         return cats
 
     def _get_threshold(self):
