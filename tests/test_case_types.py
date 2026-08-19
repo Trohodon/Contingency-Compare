@@ -122,11 +122,11 @@ class CaseTypeIntegrationTests(unittest.TestCase):
 
         wb = load_workbook(output_path, read_only=True, data_only=True)
         self.assertEqual(
-            wb["Left vs Right"].cell(row=2, column=2).value,
+            wb["Left vs Right"].cell(row=4, column=2).value,
             "None",
         )
         self.assertEqual(
-            wb["Left vs Right"].cell(row=2, column=3).value,
+            wb["Left vs Right"].cell(row=4, column=3).value,
             "No Voltage Issues",
         )
         wb.close()
@@ -173,6 +173,7 @@ class CaseTypeIntegrationTests(unittest.TestCase):
         ws = wb["Scenario"]
         self.assertEqual(ws.cell(row=4, column=2).value, "None")
         self.assertEqual(ws.cell(row=4, column=3).value, "No Voltage Issues")
+        self.assertEqual(ws.cell(row=3, column=7).value, "Notes")
         wb.close()
 
 
