@@ -12,6 +12,7 @@ from core.comparator import (
 )
 from core.comparison_builder import build_workbook
 from core.column_blacklist import apply_blacklist
+from core.case_processor import post_process_csv
 
 
 def _write_scenario_sheet(ws, offset):
@@ -175,6 +176,26 @@ class CaseTypeIntegrationTests(unittest.TestCase):
         self.assertEqual(ws.cell(row=4, column=3).value, "No Voltage Issues")
         self.assertEqual(ws.cell(row=3, column=7).value, "Notes")
         wb.close()
+
+    def test_no_violation_export_still_creates_filtered_csv(self):
+        import pandas as pd
+
+        csv_path = os.path.join(self.temp_dir.name, "empty_violation_ctg.csv")
+        with open(csv_path, "w", encoding="utf-8", newline="") as f:
+            f.write("ViolationCTG\n")
+            f.write("CTGLabel,LimViolID,LimViolLimit,LimViolValue,LimViolPct,LimViolCat\n")
+
+        filtered_path = post_process_csv(
+            csv_path,
+            dedup_enabled=True,
+            keep_categories={"Branch MVA"},
+            threshold=100,
+        )
+
+        self.assertTrue(os.path.isfile(filtered_path))
+        filtered = pd.read_csv(filtered_path)
+        self.assertEqual(len(filtered), 0)
+        self.assertIn("LimViolPct", filtered.columns)
 
 
 if __name__ == "__main__":
