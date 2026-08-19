@@ -34,13 +34,12 @@ class CaseProcessingTab(ttk.Frame):
         # Filter options
         # NOTE: v2 meaning: "Expandable issue view" (not true dedup)
         self.max_filter_var = tk.BooleanVar(value=True)
-        self.branch_mva_var = tk.BooleanVar(value=True)
-        self.bus_lv_var = tk.BooleanVar(value=True)
-        self.delete_original_var = tk.BooleanVar(value=False)
+        self.report_type_var = tk.StringVar(value="thermal")
+        self.delete_original_var = tk.BooleanVar(value=True)
         self.threshold_var = tk.StringVar(value="80")
 
         # NEW: delete filtered CSVs AFTER combined workbook is created
-        self.delete_filtered_after_combined_var = tk.BooleanVar(value=False)
+        self.delete_filtered_after_combined_var = tk.BooleanVar(value=True)
 
         self._is_running = False
 
@@ -130,35 +129,43 @@ class CaseProcessingTab(ttk.Frame):
             variable=self.max_filter_var,
         ).grid(row=0, column=0, sticky="w", padx=5, pady=2)
 
-        ttk.Checkbutton(
-            filters,
-            text='Include thermal loading rows ("Branch MVA")',
-            variable=self.branch_mva_var,
-        ).grid(row=1, column=0, sticky="w", padx=5, pady=2)
+        mode_row = ttk.Frame(filters)
+        mode_row.grid(row=1, column=0, sticky="w", padx=5, pady=2)
 
-        ttk.Checkbutton(
+        ttk.Radiobutton(
+            mode_row,
+            text='Thermal loading ("Branch MVA")',
+            variable=self.report_type_var,
+            value="thermal",
+            command=self._sync_filter_controls,
+        ).pack(side=tk.LEFT)
+
+        ttk.Label(mode_row, text="Percent loading threshold:").pack(side=tk.LEFT, padx=(14, 0))
+        self.threshold_entry = ttk.Entry(mode_row, textvariable=self.threshold_var, width=7)
+        self.threshold_entry.pack(side=tk.LEFT, padx=(6, 0))
+
+        ttk.Radiobutton(
             filters,
-            text='Include voltage rows ("Bus Low Volts", "Bus High Volts", "Change Bus High Volts")',
-            variable=self.bus_lv_var,
+            text='Voltage ("Bus Low Volts", "Bus High Volts", "Change Bus High Volts")',
+            variable=self.report_type_var,
+            value="voltage",
+            command=self._sync_filter_controls,
         ).grid(row=2, column=0, sticky="w", padx=5, pady=2)
-
-        threshold_row = ttk.Frame(filters)
-        threshold_row.grid(row=3, column=0, sticky="w", padx=5, pady=(4, 2))
-        ttk.Label(threshold_row, text="Percent loading threshold:").pack(side=tk.LEFT)
-        ttk.Entry(threshold_row, textvariable=self.threshold_var, width=7).pack(side=tk.LEFT, padx=(6, 0))
 
         ttk.Checkbutton(
             filters,
             text="Delete original (unfiltered) CSV after filtering",
             variable=self.delete_original_var,
-        ).grid(row=4, column=0, sticky="w", padx=5, pady=(4, 2))
+        ).grid(row=3, column=0, sticky="w", padx=5, pady=(4, 2))
 
         # NEW checkbox
         ttk.Checkbutton(
             filters,
             text="Delete filtered CSVs after combined workbook is created",
             variable=self.delete_filtered_after_combined_var,
-        ).grid(row=5, column=0, sticky="w", padx=5, pady=(4, 2))
+        ).grid(row=4, column=0, sticky="w", padx=5, pady=(4, 2))
+
+        self._sync_filter_controls()
 
         log_frame = ttk.LabelFrame(self, text="Case Processing Log")
         log_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=10, pady=10)
@@ -173,12 +180,21 @@ class CaseProcessingTab(ttk.Frame):
     # ───────────── Helpers ───────────── #
 
     def _get_row_filter_categories(self):
-        cats = set()
-        if self.branch_mva_var.get():
-            cats.update(THERMAL_VIOLATION_CATEGORIES)
-        if self.bus_lv_var.get():
-            cats.update(VOLTAGE_VIOLATION_CATEGORIES)
-        return cats
+        if self.report_type_var.get() == "voltage":
+            return set(VOLTAGE_VIOLATION_CATEGORIES)
+        return set(THERMAL_VIOLATION_CATEGORIES)
+
+    def _get_effective_threshold(self):
+        if self.report_type_var.get() == "voltage":
+            return 0.0
+        return self._get_threshold()
+
+    def _sync_filter_controls(self):
+        state = "normal" if self.report_type_var.get() == "thermal" else "disabled"
+        try:
+            self.threshold_entry.configure(state=state)
+        except Exception:
+            pass
 
     def _get_threshold(self):
         try:
@@ -266,7 +282,7 @@ class CaseProcessingTab(ttk.Frame):
         if not cats:
             self.log("WARNING: No LimViolCat categories selected. Row filter will be skipped.")
 
-        threshold = self._get_threshold()
+        threshold = self._get_effective_threshold()
         if threshold is None:
             return
 
@@ -350,7 +366,7 @@ class CaseProcessingTab(ttk.Frame):
         if not cats:
             self.log("WARNING: No LimViolCat categories selected. Row filter will be skipped.")
 
-        threshold = self._get_threshold()
+        threshold = self._get_effective_threshold()
         if threshold is None:
             return
 
@@ -381,7 +397,10 @@ class CaseProcessingTab(ttk.Frame):
             return
 
         self.log("\n=== Batch processing ACCA/DC cases in folder ===")
-        self.log(f"Percent loading threshold: {threshold:.2f}%")
+        if self.report_type_var.get() == "thermal":
+            self.log(f"Percent loading threshold: {threshold:.2f}%")
+        else:
+            self.log("Voltage report selected; percent loading threshold ignored.")
 
         errors = []
         for label in TARGET_PATTERNS:
@@ -428,7 +447,10 @@ class CaseProcessingTab(ttk.Frame):
         self.log("\n=== Multi-folder mode: each subfolder is a case set to compare ===")
         self.log(f"Root folder: {root}")
         self.log(f"Subfolders found: {', '.join(subdirs)}")
-        self.log(f"Percent loading threshold: {threshold:.2f}%")
+        if self.report_type_var.get() == "thermal":
+            self.log(f"Percent loading threshold: {threshold:.2f}%")
+        else:
+            self.log("Voltage report selected; percent loading threshold ignored.")
 
         folder_to_case_csvs = {}
         errors = []
@@ -487,6 +509,7 @@ class CaseProcessingTab(ttk.Frame):
             group_details=self.max_filter_var.get(),
             log_func=self.log,
             threshold=threshold,
+            report_type=self.report_type_var.get(),
         )
 
         if workbook_path:
