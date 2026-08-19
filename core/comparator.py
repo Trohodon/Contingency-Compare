@@ -502,6 +502,7 @@ def build_batch_comparison_workbook(
                     "LeftPct": None,
                     "RightPct": None,
                     "DeltaDisplay": "",
+                    "Notes": "",
                 }])
 
             base_name = _sanitize_sheet_name(f"{left_sheet} vs {right_sheet}")
