@@ -57,12 +57,25 @@ def _filter_by_percent_threshold(df: pd.DataFrame, threshold: float) -> pd.DataF
 def _write_no_voltage_issues_row(ws, row: int, data_font, thin_border, left_align, center):
     ws.cell(row=row, column=2).value = "None"
     ws.cell(row=row, column=3).value = "No Voltage Issues"
-    for col in range(2, 7):
+    ws.cell(row=row, column=7).value = ""
+    for col in range(2, 8):
         cell = ws.cell(row=row, column=col)
         cell.font = data_font
         cell.border = thin_border
         cell.alignment = left_align if col in (2, 3) else center
     return row + 1
+
+
+def _no_voltage_issues_record(case_type: str) -> dict:
+    return {
+        "CaseType": case_type,
+        "CTGLabel": "None",
+        "LimViolID": "No Voltage Issues",
+        "LimViolLimit": None,
+        "LimViolValue": None,
+        "LimViolPct": None,
+        "Notes": "",
+    }
 
 
 def _build_simple_workbook(root_folder, folder_to_case_csvs, log_func=None, threshold: float = 80.0):
@@ -93,16 +106,21 @@ def _build_simple_workbook(root_folder, folder_to_case_csvs, log_func=None, thre
                 dfs = []
                 for label in TARGET_PATTERNS:
                     csv_path = case_map.get(label)
-                    if not csv_path:
-                        continue
-                    try:
-                        df = pd.read_csv(csv_path)
-                        df.insert(0, "CaseType", label)
-                        df = _filter_by_percent_threshold(df, threshold)
-                        dfs.append(df)
-                    except Exception as e:
-                        if log_func:
-                            log_func(f"  [{folder_name}] WARNING: Failed to read {csv_path}: {e}")
+                    if csv_path:
+                        try:
+                            df = pd.read_csv(csv_path)
+                            df.insert(0, "CaseType", label)
+                            df = _filter_by_percent_threshold(df, threshold)
+                            if "Notes" not in df.columns:
+                                df["Notes"] = ""
+                            if df.empty:
+                                df = pd.DataFrame([_no_voltage_issues_record(label)])
+                            dfs.append(df)
+                            continue
+                        except Exception as e:
+                            if log_func:
+                                log_func(f"  [{folder_name}] WARNING: Failed to read {csv_path}: {e}")
+                    dfs.append(pd.DataFrame([_no_voltage_issues_record(label)]))
 
                 if not dfs:
                     continue
@@ -220,32 +238,32 @@ def build_workbook(
         # Excel outline behavior: summary rows ABOVE details (so dropdown is on the max row)
         ws.sheet_properties.outlinePr.summaryBelow = False
 
-        # Set column widths – contiguous columns B to F
+        # Set column widths – contiguous columns B to G
         ws.column_dimensions["B"].width = 55  # Contingency Events
         ws.column_dimensions["C"].width = 55  # Resulting Issue
         ws.column_dimensions["D"].width = 18  # Limit
         ws.column_dimensions["E"].width = 22  # Contingency Value (MVA)
         ws.column_dimensions["F"].width = 18  # Percent Loading
+        ws.column_dimensions["G"].width = 35  # Notes
 
         # Shift everything down by 1 row
         current_row = 2
 
         for label in TARGET_PATTERNS:
             block_df = df[df["CaseType"] == label].copy()
-            if block_df.empty:
-                continue
-
             pretty_name = CANONICAL_TO_PRETTY.get(label, label)
             block_df = _filter_by_percent_threshold(block_df, threshold)
+            if "Notes" not in block_df.columns:
+                block_df["Notes"] = ""
 
             # ===== Title row =====
-            ws.merge_cells(start_row=current_row, start_column=2, end_row=current_row, end_column=6)
+            ws.merge_cells(start_row=current_row, start_column=2, end_row=current_row, end_column=7)
             c = ws.cell(row=current_row, column=2)
             c.value = pretty_name
             c.fill = title_fill
             c.font = title_font
             c.alignment = center
-            for col in range(2, 7):  # B..F
+            for col in range(2, 8):  # B..G
                 ws.cell(row=current_row, column=col).border = thin_border
             current_row += 1
 
@@ -256,6 +274,7 @@ def build_workbook(
                 ("D", "Limit"),
                 ("E", "Contingency Value (MVA)"),
                 ("F", "Percent Loading"),
+                ("G", "Notes"),
             ]
             for col_letter, text in headers:
                 col_idx = ord(col_letter) - ord("A") + 1
@@ -339,17 +358,19 @@ def build_workbook(
                     lim_cell = ws.cell(row=current_row, column=4)
                     val_cell = ws.cell(row=current_row, column=5)
                     pct_cell = ws.cell(row=current_row, column=6)
+                    notes_cell = ws.cell(row=current_row, column=7)
 
                     lim_cell.value = _round1_if_numeric(getattr(r0, "LimViolLimit", ""))
                     val_cell.value = _round1_if_numeric(getattr(r0, "LimViolValue", ""))
                     pct_cell.value = _round1_if_numeric(getattr(r0, "LimViolPct", ""))
+                    notes_cell.value = getattr(r0, "Notes", "")
 
                     # Force 1-decimal display when numeric
                     lim_cell.number_format = "0.0"
                     val_cell.number_format = "0.0"
                     pct_cell.number_format = "0.0"
 
-                    for col in range(2, 7):
+                    for col in range(2, 8):
                         cell = ws.cell(row=current_row, column=col)
                         cell.font = data_bold_font
                         cell.border = thin_border
@@ -372,16 +393,18 @@ def build_workbook(
                         lim_cell = ws.cell(row=current_row, column=4)
                         val_cell = ws.cell(row=current_row, column=5)
                         pct_cell = ws.cell(row=current_row, column=6)
+                        notes_cell = ws.cell(row=current_row, column=7)
 
                         lim_cell.value = _round1_if_numeric(getattr(r, "LimViolLimit", ""))
                         val_cell.value = _round1_if_numeric(getattr(r, "LimViolValue", ""))
                         pct_cell.value = _round1_if_numeric(getattr(r, "LimViolPct", ""))
+                        notes_cell.value = getattr(r, "Notes", "")
 
                         lim_cell.number_format = "0.0"
                         val_cell.number_format = "0.0"
                         pct_cell.number_format = "0.0"
 
-                        for col in range(2, 7):
+                        for col in range(2, 8):
                             cell = ws.cell(row=current_row, column=col)
                             cell.font = data_font
                             cell.border = thin_border
@@ -408,16 +431,18 @@ def build_workbook(
                     lim_cell = ws.cell(row=current_row, column=4)
                     val_cell = ws.cell(row=current_row, column=5)
                     pct_cell = ws.cell(row=current_row, column=6)
+                    notes_cell = ws.cell(row=current_row, column=7)
 
                     lim_cell.value = _round1_if_numeric(row.get("LimViolLimit", ""))
                     val_cell.value = _round1_if_numeric(row.get("LimViolValue", ""))
                     pct_cell.value = _round1_if_numeric(row.get("LimViolPct", ""))
+                    notes_cell.value = row.get("Notes", "")
 
                     lim_cell.number_format = "0.0"
                     val_cell.number_format = "0.0"
                     pct_cell.number_format = "0.0"
 
-                    for col in range(2, 7):
+                    for col in range(2, 8):
                         cell = ws.cell(row=current_row, column=col)
                         cell.font = data_font
                         cell.border = thin_border
