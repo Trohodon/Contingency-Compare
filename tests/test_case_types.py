@@ -260,7 +260,7 @@ class CaseTypeIntegrationTests(unittest.TestCase):
             {"Bus Low Volts", "Bus High Volts", "Change Bus High Volts"},
         )
 
-    def test_voltage_workbook_ignores_percent_threshold_and_uses_pu_hundredths(self):
+    def test_voltage_workbook_ignores_percent_threshold_and_uses_pu_thousandths(self):
         import pandas as pd
 
         csv_path = os.path.join(self.temp_dir.name, "voltage_case.csv")
@@ -288,8 +288,10 @@ class CaseTypeIntegrationTests(unittest.TestCase):
             self.assertEqual(ws.cell(row=3, column=5).value, "Contingency Value (p.u.)")
             self.assertTrue(ws.column_dimensions["F"].hidden)
             self.assertEqual(ws.cell(row=4, column=2).value, "Voltage CTG")
-            self.assertEqual(ws.cell(row=4, column=4).value, 0.96)
-            self.assertEqual(ws.cell(row=4, column=5).value, 1.05)
+            self.assertEqual(ws.cell(row=4, column=4).value, 0.956)
+            self.assertEqual(ws.cell(row=4, column=5).value, 1.047)
+            self.assertEqual(ws.cell(row=4, column=4).number_format, "0.000")
+            self.assertEqual(ws.cell(row=4, column=5).number_format, "0.000")
             self.assertIsNone(ws.cell(row=4, column=6).value)
         finally:
             wb.close()
