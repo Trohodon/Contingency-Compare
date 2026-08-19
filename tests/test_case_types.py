@@ -142,11 +142,13 @@ class CaseTypeIntegrationTests(unittest.TestCase):
                 "LimViolLimit": [100],
                 "LimViolValue": [90],
                 "LimViolPct": [90],
+                "LimViolCat": ["Branch MVA"],
                 "BusNum": [1],
             }
         )
         out, removed = apply_blacklist(df)
         self.assertIn("LimViolLimit", out.columns)
+        self.assertIn("LimViolCat", out.columns)
         self.assertNotIn("BusNum", out.columns)
         self.assertIn("BusNum", removed)
 
@@ -257,6 +259,40 @@ class CaseTypeIntegrationTests(unittest.TestCase):
             set(filtered["LimViolCat"]),
             {"Bus Low Volts", "Bus High Volts", "Change Bus High Volts"},
         )
+
+    def test_voltage_workbook_ignores_percent_threshold_and_uses_pu_hundredths(self):
+        import pandas as pd
+
+        csv_path = os.path.join(self.temp_dir.name, "voltage_case.csv")
+        pd.DataFrame(
+            {
+                "CTGLabel": ["Voltage CTG"],
+                "LimViolID": ["Voltage Issue"],
+                "LimViolLimit": [0.956],
+                "LimViolValue": [1.047],
+                "LimViolPct": [50],
+                "LimViolCat": ["Bus High Volts"],
+            }
+        ).to_csv(csv_path, index=False)
+
+        output_path = build_workbook(
+            self.temp_dir.name,
+            {"Scenario": {"ACCA_LongTerm": csv_path}},
+            threshold=100,
+            report_type="voltage",
+        )
+
+        wb = load_workbook(output_path, read_only=False, data_only=True)
+        try:
+            ws = wb["Scenario"]
+            self.assertEqual(ws.cell(row=3, column=5).value, "Contingency Value (p.u.)")
+            self.assertTrue(ws.column_dimensions["F"].hidden)
+            self.assertEqual(ws.cell(row=4, column=2).value, "Voltage CTG")
+            self.assertEqual(ws.cell(row=4, column=4).value, 0.96)
+            self.assertEqual(ws.cell(row=4, column=5).value, 1.05)
+            self.assertIsNone(ws.cell(row=4, column=6).value)
+        finally:
+            wb.close()
 
 
 if __name__ == "__main__":
