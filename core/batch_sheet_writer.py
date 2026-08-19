@@ -11,7 +11,7 @@
 # UPDATED (Limit column):
 # - Adds a "Limit" column (associated with Resulting Issue) in column D.
 # - Output columns now:
-#     B Contingency Events | C Resulting Issue | D Limit | E Left % | F Right % | G Δ% / Status
+#     B Contingency Events | C Resulting Issue | D Limit | E Left % | F Right % | G Δ% / Status | H Notes
 
 from __future__ import annotations
 
@@ -38,6 +38,7 @@ def apply_table_styles(ws: Worksheet):
         5: 15,  # E: Left %
         6: 15,  # F: Right %
         7: 22,  # G: Delta / Status
+        8: 35,  # H: Notes
     }
     for col_idx, width in widths.items():
         ws.column_dimensions[get_column_letter(col_idx)].width = width
@@ -105,7 +106,7 @@ def _normalize_issue_series(series: pd.Series) -> pd.Series:
 
 
 def _write_title_row(ws: Worksheet, row: int, title: str):
-    ws.merge_cells(start_row=row, start_column=2, end_row=row, end_column=7)  # B..G
+    ws.merge_cells(start_row=row, start_column=2, end_row=row, end_column=8)  # B..H
     cell = ws.cell(row=row, column=2)
     cell.value = title
     cell.fill = TITLE_FILL
@@ -121,6 +122,7 @@ def _write_header_row(ws: Worksheet, row: int):
         "Left %",
         "Right %",
         "Δ% (Right - Left) / Status",
+        "Notes",
     ]
     for col_offset, header in enumerate(headers):
         cell = ws.cell(row=row, column=2 + col_offset)
@@ -140,12 +142,13 @@ def _write_data_row(
     left_pct,
     right_pct,
     delta,
+    notes="",
     *,
     outline_level: int = 0,
     hidden: bool = False,
     bold: bool = False,
 ):
-    values = [cont, issue, limit, left_pct, right_pct, delta]
+    values = [cont, issue, limit, left_pct, right_pct, delta, notes]
 
     for col_offset, val in enumerate(values):
         cell = ws.cell(row=row, column=2 + col_offset)
@@ -195,19 +198,20 @@ def write_formatted_pair_sheet(
     ws = wb.create_sheet(title=ws_name)
     apply_table_styles(ws)
 
-    if df_pair is None or df_pair.empty:
-        ws.cell(row=2, column=2).value = "None"
-        ws.cell(row=2, column=3).value = "No Voltage Issues"
-        return
+    if df_pair is None:
+        df_pair = pd.DataFrame()
+    for col in ("CaseType", "Contingency", "ResultingIssue", "Limit", "LeftPct", "RightPct", "DeltaDisplay"):
+        if col not in df_pair.columns:
+            df_pair = df_pair.copy()
+            df_pair[col] = None
+    if "Notes" not in df_pair.columns:
+        df_pair = df_pair.copy()
+        df_pair["Notes"] = ""
 
     current_row = 2
 
-    wrote_block = False
     for case_type_pretty in CANONICAL_TO_PRETTY.values():
         sub = df_pair[df_pair["CaseType"] == case_type_pretty].copy()
-        if sub.empty:
-            continue
-        wrote_block = True
 
         # Normalize blank issues -> same as above (safety net)
         if "ResultingIssue" not in sub.columns:
@@ -220,6 +224,21 @@ def write_formatted_pair_sheet(
         _write_header_row(ws, current_row)
         current_row += 1
 
+        if sub.empty:
+            _write_data_row(
+                ws,
+                current_row,
+                "None",
+                "No Voltage Issues",
+                None,
+                None,
+                None,
+                "",
+                notes="",
+            )
+            current_row += 2
+            continue
+
         if not expandable_issue_view:
             for _, r in sub.iterrows():
                 cont = str(r.get("Contingency", "") or "")
@@ -228,6 +247,7 @@ def write_formatted_pair_sheet(
                 left_pct = r.get("LeftPct", None)
                 right_pct = r.get("RightPct", None)
                 delta = str(r.get("DeltaDisplay", "") or "")
+                notes = str(r.get("Notes", "") or "")
 
                 _write_data_row(
                     ws,
@@ -238,6 +258,7 @@ def write_formatted_pair_sheet(
                     left_pct,
                     right_pct,
                     delta,
+                    notes=notes,
                     outline_level=0,
                     hidden=False,
                     bold=False,
@@ -277,6 +298,7 @@ def write_formatted_pair_sheet(
                 left_pct = r.get("LeftPct", None)
                 right_pct = r.get("RightPct", None)
                 delta = str(r.get("DeltaDisplay", "") or "")
+                notes = str(r.get("Notes", "") or "")
 
                 if first:
                     summary_row_index = current_row
@@ -290,6 +312,7 @@ def write_formatted_pair_sheet(
                     left_pct,
                     right_pct,
                     delta,
+                    notes=notes,
                     outline_level=0 if first else 1,
                     hidden=False if first else True,
                     bold=True if first else False,
@@ -306,7 +329,3 @@ def write_formatted_pair_sheet(
 
         # Blank row between blocks
         current_row += 1
-
-    if not wrote_block:
-        ws.cell(row=2, column=2).value = "None"
-        ws.cell(row=2, column=3).value = "No Voltage Issues"
