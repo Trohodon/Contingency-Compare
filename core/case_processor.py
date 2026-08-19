@@ -16,7 +16,39 @@ def _make_filtered_path(original_csv: str) -> str:
     return f"{base}_Filtered{ext}"
 
 
-def post_process_csv(csv_path: str, dedup_enabled: bool, keep_categories, log_func=None) -> str:
+def _to_float_series(series: pd.Series) -> pd.Series:
+    if series is None:
+        return pd.Series(dtype="float64")
+    if pd.api.types.is_numeric_dtype(series):
+        return series.astype(float)
+    cleaned = series.astype(str).str.replace("%", "", regex=False).str.strip()
+    return pd.to_numeric(cleaned, errors="coerce")
+
+
+def apply_percent_threshold(df: pd.DataFrame, threshold: float, log_func=None):
+    if df is None or df.empty:
+        return df, 0
+    if not threshold or float(threshold) <= 0:
+        return df, 0
+    if "LimViolPct" not in df.columns:
+        if log_func:
+            log_func("WARNING: Percent threshold skipped because 'LimViolPct' was not found.")
+        return df, 0
+
+    before = len(df)
+    pct = _to_float_series(df["LimViolPct"])
+    filtered_df = df[pct.fillna(float("-inf")) >= float(threshold)].copy()
+    removed = before - len(filtered_df)
+    return filtered_df, removed
+
+
+def post_process_csv(
+    csv_path: str,
+    dedup_enabled: bool,
+    keep_categories,
+    log_func=None,
+    threshold: float = 0.0,
+) -> str:
     """
     Apply:
       1) Row filter (LimViolCat) using keep_categories
@@ -67,6 +99,19 @@ def post_process_csv(csv_path: str, dedup_enabled: bool, keep_categories, log_fu
 
         if log_func:
             log_func(f"Rows removed by row filter: {removed_rows}")
+
+        # 1b) Percent loading threshold before sorting/deduping.
+        if log_func:
+            log_func(f"\nApplying percent loading threshold: {float(threshold):.2f}%")
+
+        filtered_data, removed_pct_rows = apply_percent_threshold(
+            filtered_data,
+            threshold=threshold,
+            log_func=log_func,
+        )
+
+        if log_func:
+            log_func(f"Rows removed by percent threshold: {removed_pct_rows}")
 
         # 2) v2 LimViolID behavior: keep all, sort max first per LimViolID (for Excel dropdown grouping)
         if dedup_enabled:
@@ -122,6 +167,7 @@ def process_case(
     keep_categories,
     delete_original: bool,
     log_func=None,
+    threshold: float = 0.0,
 ) -> str:
     """
     Full pipeline for a single .pwb:
@@ -135,12 +181,18 @@ def process_case(
     if log_func:
         log_func("\nConnecting to PowerWorld and exporting ViolationCTG...")
 
-    csv_out = export_violation_ctg(pwb_path, log_func)
+    csv_out = export_violation_ctg(pwb_path, log_func, threshold=threshold)
 
     if log_func:
         log_func(f"Exported CSV path: {csv_out}")
 
-    filtered_csv = post_process_csv(csv_out, dedup_enabled, keep_categories, log_func)
+    filtered_csv = post_process_csv(
+        csv_out,
+        dedup_enabled,
+        keep_categories,
+        log_func,
+        threshold=threshold,
+    )
 
     if delete_original and filtered_csv and os.path.exists(csv_out):
         try:
