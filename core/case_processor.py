@@ -100,13 +100,26 @@ def post_process_csv(
         log_func("\nReading CSV to detect headers...")
 
     try:
+        if not os.path.exists(csv_path) or os.path.getsize(csv_path) == 0:
+            if log_func:
+                log_func("ViolationCTG export was empty; creating empty filtered CSV.")
+            empty = pd.DataFrame(columns=REQUIRED_FILTERED_COLUMNS)
+            return _save_filtered_csv(csv_path, empty, log_func=log_func)
+
         # Skip the first row because it only has "ViolationCTG" in one column.
-        raw = pd.read_csv(csv_path, header=None, skiprows=1)
+        try:
+            raw = pd.read_csv(csv_path, header=None, skiprows=1)
+        except pd.errors.EmptyDataError:
+            if log_func:
+                log_func("ViolationCTG export has no header/data rows; creating empty filtered CSV.")
+            empty = pd.DataFrame(columns=REQUIRED_FILTERED_COLUMNS)
+            return _save_filtered_csv(csv_path, empty, log_func=log_func)
 
         if raw.shape[0] < 1:
             if log_func:
-                log_func("Not enough rows in CSV to extract headers (need at least 1).")
-            return None
+                log_func("No header/data rows found after title row; creating empty filtered CSV.")
+            empty = pd.DataFrame(columns=REQUIRED_FILTERED_COLUMNS)
+            return _save_filtered_csv(csv_path, empty, log_func=log_func)
 
         header_row = list(raw.iloc[0])
 
