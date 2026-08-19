@@ -2,6 +2,7 @@ import os
 import pandas as pd
 
 from .case_types import CANONICAL_TO_PRETTY, TARGET_PATTERNS
+from .column_blacklist import VOLTAGE_VIOLATION_CATEGORIES
 
 # Try to import openpyxl for formatting + outline grouping
 try:
@@ -47,6 +48,37 @@ def _round1_if_numeric(x):
     return round(v, 1)
 
 
+def _round_if_numeric(x, digits: int):
+    v = _as_float(x)
+    if v is None:
+        return x
+    return round(v, digits)
+
+
+def _is_voltage_row(row) -> bool:
+    cat = row.get("LimViolCat", "") if hasattr(row, "get") else getattr(row, "LimViolCat", "")
+    return str(cat or "").strip() in VOLTAGE_VIOLATION_CATEGORIES
+
+
+def _limit_or_value_for_display(row, field_name: str, report_type: str):
+    digits = 2 if report_type == "voltage" or _is_voltage_row(row) else 1
+    if hasattr(row, "get"):
+        return _round_if_numeric(row.get(field_name, ""), digits)
+    return _round_if_numeric(getattr(row, field_name, ""), digits)
+
+
+def _pct_for_display(row, report_type: str):
+    if report_type == "voltage":
+        return None
+    if hasattr(row, "get"):
+        return _round1_if_numeric(row.get("LimViolPct", ""))
+    return _round1_if_numeric(getattr(row, "LimViolPct", ""))
+
+
+def _number_format_for_report(report_type: str) -> str:
+    return "0.00" if report_type == "voltage" else "0.0"
+
+
 def _filter_by_percent_threshold(df: pd.DataFrame, threshold: float) -> pd.DataFrame:
     if df is None or df.empty or "LimViolPct" not in df.columns:
         return df
@@ -78,7 +110,13 @@ def _no_voltage_issues_record(case_type: str) -> dict:
     }
 
 
-def _build_simple_workbook(root_folder, folder_to_case_csvs, log_func=None, threshold: float = 80.0):
+def _build_simple_workbook(
+    root_folder,
+    folder_to_case_csvs,
+    log_func=None,
+    threshold: float = 80.0,
+    report_type: str = "thermal",
+):
     """
     Fallback: simple one-sheet-per-scenario workbook, no fancy formatting,
     and no outline dropdown grouping.
@@ -110,7 +148,8 @@ def _build_simple_workbook(root_folder, folder_to_case_csvs, log_func=None, thre
                         try:
                             df = pd.read_csv(csv_path)
                             df.insert(0, "CaseType", label)
-                            df = _filter_by_percent_threshold(df, threshold)
+                            if report_type == "thermal":
+                                df = _filter_by_percent_threshold(df, threshold)
                             if "Notes" not in df.columns:
                                 df["Notes"] = ""
                             if df.empty:
@@ -145,6 +184,7 @@ def build_workbook(
     group_details: bool = True,
     log_func=None,
     threshold: float = 80.0,
+    report_type: str = "thermal",
 ):
     """
     Build a combined Excel workbook with one sheet per subfolder.
@@ -163,7 +203,13 @@ def build_workbook(
     if not OPENPYXL_AVAILABLE:
         if log_func:
             log_func("openpyxl not available; building simple combined workbook without special formatting.")
-        return _build_simple_workbook(root_folder, folder_to_case_csvs, log_func, threshold=threshold)
+        return _build_simple_workbook(
+            root_folder,
+            folder_to_case_csvs,
+            log_func,
+            threshold=threshold,
+            report_type=report_type,
+        )
 
     # ---------------------------
     # Build scenario DataFrames
@@ -200,8 +246,14 @@ def build_workbook(
     if log_func:
         log_func(f"\nBuilding FORMATTED combined workbook:\n  {workbook_path}")
         log_func(f"Expandable dropdown grouping is {'ON' if group_details else 'OFF'}.")
-        log_func(f"Percent loading threshold: {float(threshold):.2f}%")
-        log_func("Sorting Resulting Issues by highest Percent Loading (worst first).")
+        if report_type == "thermal":
+            log_func(f"Percent loading threshold: {float(threshold):.2f}%")
+        else:
+            log_func("Voltage report selected; percent loading threshold is ignored.")
+        if report_type == "thermal":
+            log_func("Sorting Resulting Issues by highest Percent Loading (worst first).")
+        else:
+            log_func("Voltage report values are displayed in p.u. to two decimals.")
         log_func("Shifting output down by 1 row (blank Row 1).")
 
     wb = Workbook()
@@ -242,9 +294,11 @@ def build_workbook(
         ws.column_dimensions["B"].width = 55  # Contingency Events
         ws.column_dimensions["C"].width = 55  # Resulting Issue
         ws.column_dimensions["D"].width = 18  # Limit
-        ws.column_dimensions["E"].width = 22  # Contingency Value (MVA)
+        ws.column_dimensions["E"].width = 22  # Contingency Value
         ws.column_dimensions["F"].width = 18  # Percent Loading
         ws.column_dimensions["G"].width = 35  # Notes
+        if report_type == "voltage":
+            ws.column_dimensions["F"].hidden = True
 
         # Shift everything down by 1 row
         current_row = 2
@@ -252,9 +306,11 @@ def build_workbook(
         for label in TARGET_PATTERNS:
             block_df = df[df["CaseType"] == label].copy()
             pretty_name = CANONICAL_TO_PRETTY.get(label, label)
-            block_df = _filter_by_percent_threshold(block_df, threshold)
+            if report_type == "thermal":
+                block_df = _filter_by_percent_threshold(block_df, threshold)
             if "Notes" not in block_df.columns:
                 block_df["Notes"] = ""
+            value_header = "Contingency Value (p.u.)" if report_type == "voltage" else "Contingency Value (MVA)"
 
             # ===== Title row =====
             ws.merge_cells(start_row=current_row, start_column=2, end_row=current_row, end_column=7)
@@ -272,7 +328,7 @@ def build_workbook(
                 ("B", "Contingency Events"),
                 ("C", "Resulting Issue"),
                 ("D", "Limit"),
-                ("E", "Contingency Value (MVA)"),
+                ("E", value_header),
                 ("F", "Percent Loading"),
                 ("G", "Notes"),
             ]
@@ -360,14 +416,14 @@ def build_workbook(
                     pct_cell = ws.cell(row=current_row, column=6)
                     notes_cell = ws.cell(row=current_row, column=7)
 
-                    lim_cell.value = _round1_if_numeric(getattr(r0, "LimViolLimit", ""))
-                    val_cell.value = _round1_if_numeric(getattr(r0, "LimViolValue", ""))
-                    pct_cell.value = _round1_if_numeric(getattr(r0, "LimViolPct", ""))
+                    lim_cell.value = _limit_or_value_for_display(r0, "LimViolLimit", report_type)
+                    val_cell.value = _limit_or_value_for_display(r0, "LimViolValue", report_type)
+                    pct_cell.value = _pct_for_display(r0, report_type)
                     notes_cell.value = getattr(r0, "Notes", "")
 
-                    # Force 1-decimal display when numeric
-                    lim_cell.number_format = "0.0"
-                    val_cell.number_format = "0.0"
+                    value_number_format = _number_format_for_report(report_type)
+                    lim_cell.number_format = value_number_format
+                    val_cell.number_format = value_number_format
                     pct_cell.number_format = "0.0"
 
                     for col in range(2, 8):
@@ -395,13 +451,14 @@ def build_workbook(
                         pct_cell = ws.cell(row=current_row, column=6)
                         notes_cell = ws.cell(row=current_row, column=7)
 
-                        lim_cell.value = _round1_if_numeric(getattr(r, "LimViolLimit", ""))
-                        val_cell.value = _round1_if_numeric(getattr(r, "LimViolValue", ""))
-                        pct_cell.value = _round1_if_numeric(getattr(r, "LimViolPct", ""))
+                        lim_cell.value = _limit_or_value_for_display(r, "LimViolLimit", report_type)
+                        val_cell.value = _limit_or_value_for_display(r, "LimViolValue", report_type)
+                        pct_cell.value = _pct_for_display(r, report_type)
                         notes_cell.value = getattr(r, "Notes", "")
 
-                        lim_cell.number_format = "0.0"
-                        val_cell.number_format = "0.0"
+                        value_number_format = _number_format_for_report(report_type)
+                        lim_cell.number_format = value_number_format
+                        val_cell.number_format = value_number_format
                         pct_cell.number_format = "0.0"
 
                         for col in range(2, 8):
@@ -433,13 +490,14 @@ def build_workbook(
                     pct_cell = ws.cell(row=current_row, column=6)
                     notes_cell = ws.cell(row=current_row, column=7)
 
-                    lim_cell.value = _round1_if_numeric(row.get("LimViolLimit", ""))
-                    val_cell.value = _round1_if_numeric(row.get("LimViolValue", ""))
-                    pct_cell.value = _round1_if_numeric(row.get("LimViolPct", ""))
+                    lim_cell.value = _limit_or_value_for_display(row, "LimViolLimit", report_type)
+                    val_cell.value = _limit_or_value_for_display(row, "LimViolValue", report_type)
+                    pct_cell.value = _pct_for_display(row, report_type)
                     notes_cell.value = row.get("Notes", "")
 
-                    lim_cell.number_format = "0.0"
-                    val_cell.number_format = "0.0"
+                    value_number_format = _number_format_for_report(report_type)
+                    lim_cell.number_format = value_number_format
+                    val_cell.number_format = value_number_format
                     pct_cell.number_format = "0.0"
 
                     for col in range(2, 8):
