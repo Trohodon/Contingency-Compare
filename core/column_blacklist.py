@@ -172,6 +172,7 @@ REQUIRED_OUTPUT_COLUMNS = {
     "LimViolLimit",
     "LimViolValue",
     "LimViolPct",
+    "LimViolCat",
 }
 
 
