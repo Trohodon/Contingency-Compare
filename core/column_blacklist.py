@@ -212,6 +212,9 @@ VOLTAGE_VIOLATION_CATEGORIES = {
     "Change Bus High Volts",
 }
 ROW_FILTER_KEEP_VALUES = THERMAL_VIOLATION_CATEGORIES | VOLTAGE_VIOLATION_CATEGORIES
+EXCLUDED_CONTINGENCY_NAME_PATTERNS = {
+    "+ Cross230kV",
+}
 
 
 def apply_row_filter(df, keep_values=None, log_func=None):
@@ -245,6 +248,30 @@ def apply_row_filter(df, keep_values=None, log_func=None):
     after = len(filtered_df)
     removed = before - after
 
+    return filtered_df, removed
+
+
+def apply_contingency_name_exclusion(df, log_func=None):
+    """
+    Remove rows whose CTGLabel contains a configured excluded contingency name pattern.
+    Matching is case-insensitive and ignores missing CTGLabel columns.
+    """
+    if df is None or df.empty:
+        return df, 0
+
+    if "CTGLabel" not in df.columns:
+        if log_func:
+            log_func("WARNING: Contingency name exclusion skipped because 'CTGLabel' was not found.")
+        return df, 0
+
+    before = len(df)
+    labels = df["CTGLabel"].fillna("").astype(str)
+    mask = pd.Series(False, index=df.index)
+    for pattern in EXCLUDED_CONTINGENCY_NAME_PATTERNS:
+        mask = mask | labels.str.contains(pattern, case=False, regex=False)
+
+    filtered_df = df[~mask].copy()
+    removed = before - len(filtered_df)
     return filtered_df, removed
 
 
