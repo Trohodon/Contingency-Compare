@@ -11,7 +11,7 @@ from core.comparator import (
     build_batch_comparison_workbook,
 )
 from core.comparison_builder import build_workbook
-from core.column_blacklist import apply_blacklist
+from core.column_blacklist import apply_blacklist, apply_row_filter, VOLTAGE_VIOLATION_CATEGORIES
 from core.case_processor import post_process_csv
 
 
@@ -196,6 +196,67 @@ class CaseTypeIntegrationTests(unittest.TestCase):
         filtered = pd.read_csv(filtered_path)
         self.assertEqual(len(filtered), 0)
         self.assertIn("LimViolPct", filtered.columns)
+
+    def test_title_only_no_violation_export_still_creates_filtered_csv(self):
+        import pandas as pd
+
+        csv_path = os.path.join(self.temp_dir.name, "title_only_violation_ctg.csv")
+        with open(csv_path, "w", encoding="utf-8", newline="") as f:
+            f.write("ViolationCTG\n")
+
+        filtered_path = post_process_csv(
+            csv_path,
+            dedup_enabled=True,
+            keep_categories={"Branch MVA"},
+            threshold=100,
+        )
+
+        self.assertTrue(os.path.isfile(filtered_path))
+        filtered = pd.read_csv(filtered_path)
+        self.assertEqual(len(filtered), 0)
+        self.assertIn("LimViolPct", filtered.columns)
+
+    def test_empty_no_violation_export_still_creates_filtered_csv(self):
+        import pandas as pd
+
+        csv_path = os.path.join(self.temp_dir.name, "empty_file_violation_ctg.csv")
+        open(csv_path, "w", encoding="utf-8").close()
+
+        filtered_path = post_process_csv(
+            csv_path,
+            dedup_enabled=True,
+            keep_categories={"Branch MVA"},
+            threshold=100,
+        )
+
+        self.assertTrue(os.path.isfile(filtered_path))
+        filtered = pd.read_csv(filtered_path)
+        self.assertEqual(len(filtered), 0)
+        self.assertIn("LimViolPct", filtered.columns)
+
+    def test_voltage_filter_includes_low_high_and_change_high_voltage(self):
+        import pandas as pd
+
+        df = pd.DataFrame(
+            {
+                "LimViolCat": [
+                    "Bus Low Volts",
+                    "Bus High Volts",
+                    "Change Bus High Volts",
+                    "Branch MVA",
+                    "Other",
+                ],
+                "LimViolPct": [101, 102, 103, 104, 105],
+            }
+        )
+
+        filtered, removed = apply_row_filter(df, keep_values=VOLTAGE_VIOLATION_CATEGORIES)
+
+        self.assertEqual(removed, 2)
+        self.assertEqual(
+            set(filtered["LimViolCat"]),
+            {"Bus Low Volts", "Bus High Volts", "Change Bus High Volts"},
+        )
 
 
 if __name__ == "__main__":
