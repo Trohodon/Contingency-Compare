@@ -5,6 +5,7 @@ from .case_types import CANONICAL_TO_PRETTY, TARGET_PATTERNS
 from .column_blacklist import (
     VOLTAGE_VIOLATION_CATEGORIES,
     apply_contingency_name_exclusion,
+    apply_voltage_resulting_issue_exclusion,
 )
 
 # Try to import openpyxl for formatting + outline grouping
@@ -119,6 +120,8 @@ def _build_simple_workbook(
     log_func=None,
     threshold: float = 80.0,
     report_type: str = "thermal",
+    skip_voltage_46_33kv: bool = False,
+    workbook_name: str = "Combined_ViolationCTG_Comparison.xlsx",
 ):
     """
     Fallback: simple one-sheet-per-scenario workbook, no fancy formatting,
@@ -129,7 +132,7 @@ def _build_simple_workbook(
             log_func("No data to build combined workbook.")
         return None
 
-    workbook_path = os.path.join(root_folder, "Combined_ViolationCTG_Comparison.xlsx")
+    workbook_path = os.path.join(root_folder, workbook_name)
 
     if log_func:
         log_func(f"\nBuilding SIMPLE combined workbook:\n  {workbook_path}")
@@ -152,6 +155,11 @@ def _build_simple_workbook(
                             df = pd.read_csv(csv_path)
                             df.insert(0, "CaseType", label)
                             df, _ = apply_contingency_name_exclusion(df, log_func=log_func)
+                            df, _ = apply_voltage_resulting_issue_exclusion(
+                                df,
+                                enabled=report_type == "voltage" and skip_voltage_46_33kv,
+                                log_func=log_func,
+                            )
                             if report_type == "thermal":
                                 df = _filter_by_percent_threshold(df, threshold)
                             if "Notes" not in df.columns:
@@ -189,6 +197,8 @@ def build_workbook(
     log_func=None,
     threshold: float = 80.0,
     report_type: str = "thermal",
+    skip_voltage_46_33kv: bool = False,
+    workbook_name: str = "Combined_ViolationCTG_Comparison.xlsx",
 ):
     """
     Build a combined Excel workbook with one sheet per subfolder.
@@ -213,6 +223,8 @@ def build_workbook(
             log_func,
             threshold=threshold,
             report_type=report_type,
+            skip_voltage_46_33kv=skip_voltage_46_33kv,
+            workbook_name=workbook_name,
         )
 
     # ---------------------------
@@ -230,6 +242,11 @@ def build_workbook(
                 df = pd.read_csv(csv_path)
                 df.insert(0, "CaseType", label)
                 df, _ = apply_contingency_name_exclusion(df, log_func=log_func)
+                df, _ = apply_voltage_resulting_issue_exclusion(
+                    df,
+                    enabled=report_type == "voltage" and skip_voltage_46_33kv,
+                    log_func=log_func,
+                )
                 dfs.append(df)
             except Exception as e:
                 if log_func:
@@ -246,7 +263,7 @@ def build_workbook(
     # ---------------------------
     # Create formatted workbook
     # ---------------------------
-    workbook_path = os.path.join(root_folder, "Combined_ViolationCTG_Comparison.xlsx")
+    workbook_path = os.path.join(root_folder, workbook_name)
 
     if log_func:
         log_func(f"\nBuilding FORMATTED combined workbook:\n  {workbook_path}")
