@@ -190,6 +190,17 @@ class CaseProcessingTab(ttk.Frame):
 
     # ───────────── Helpers ───────────── #
 
+    def _result_label(self) -> str:
+        return "Voltage" if self.report_type_var.get() == "voltage" else "Thermal"
+
+    def _workbook_name(self, *, single_folder: bool, folder_name: str = "") -> str:
+        result_label = self._result_label()
+        if single_folder:
+            safe_folder = (folder_name or "Folder").strip() or "Folder"
+            safe_folder = "".join(ch if ch not in '<>:"/\\|?*' else "_" for ch in safe_folder)
+            return f"{safe_folder} {result_label} Results.xlsx"
+        return f"Combined {result_label} Results.xlsx"
+
     def _get_row_filter_categories(self):
         if self.report_type_var.get() == "voltage":
             return set(VOLTAGE_VIOLATION_CATEGORIES)
@@ -344,7 +355,7 @@ class CaseProcessingTab(ttk.Frame):
         cases, target_cases = scan_folder(folder, self.log)
         self.target_cases = target_cases
 
-        if cases:
+        if target_cases:
             for info in cases:
                 tag = "target" if info["is_target"] else ""
                 self.case_tree.insert(
@@ -360,11 +371,14 @@ class CaseProcessingTab(ttk.Frame):
             if os.path.isdir(os.path.join(folder, d))
         )
 
+        if cases and not target_cases:
+            self.log("No recognized ACCA/DC cases found directly in this folder.")
+
         if not subdirs:
-            self.log("No .pwb files or subfolders found in this folder.")
+            self.log("No recognized cases or scenario subfolders found in this folder.")
             return
 
-        self.log("No .pwb files directly in this folder; showing subfolders as scenarios.")
+        self.log("No recognized cases directly in this folder; showing subfolders as scenarios.")
 
         for d in subdirs:
             self.case_tree.insert("", "end", values=(d, "Scenario subfolder"))
@@ -387,19 +401,25 @@ class CaseProcessingTab(ttk.Frame):
         if threshold is None:
             return
 
-        subdirs = sorted(
-            d for d in os.listdir(root)
-            if os.path.isdir(os.path.join(root, d))
-        )
-
         self._set_running(True)
         try:
+            _, target_cases = scan_folder(root, self.log)
+            self.target_cases = target_cases
+            if target_cases:
+                self._run_export_single_folder(root, cats, threshold)
+                return
+
+            subdirs = sorted(
+                d for d in os.listdir(root)
+                if os.path.isdir(os.path.join(root, d))
+            )
             if subdirs:
                 self._run_export_multi_folder(root, subdirs, cats, threshold)
             else:
-                _, target_cases = scan_folder(root, self.log)
-                self.target_cases = target_cases
-                self._run_export_single_folder(root, cats, threshold)
+                messagebox.showwarning(
+                    "No target cases found",
+                    "No recognized ACCA / DCwAC / AUXapplied cases detected.",
+                )
         finally:
             self._set_running(False)
 
@@ -420,6 +440,7 @@ class CaseProcessingTab(ttk.Frame):
             self.log("Voltage report selected; percent loading threshold ignored.")
 
         errors = []
+        case_csvs = {}
         for label in TARGET_PATTERNS:
             self.update_idletasks()
             self.update()
@@ -446,21 +467,48 @@ class CaseProcessingTab(ttk.Frame):
                 )
                 if not filtered_csv:
                     raise RuntimeError("No filtered CSV was created.")
+                case_csvs[label] = filtered_csv
             except Exception as e:
                 msg = f"ERROR processing [{label}] case: {e}"
                 self.log(msg)
                 errors.append(msg)
 
+        workbook_path = None
+        folder_name = os.path.basename(os.path.normpath(folder)) or "Folder"
+        if case_csvs:
+            workbook_name = self._workbook_name(single_folder=True, folder_name=folder_name)
+            workbook_path = build_workbook(
+                folder,
+                {folder_name: case_csvs},
+                group_details=self.max_filter_var.get(),
+                log_func=self.log,
+                threshold=threshold,
+                report_type=self.report_type_var.get(),
+                workbook_name=workbook_name,
+            )
+
+        if workbook_path:
+            self.log(f"\n{self._result_label()} workbook created at:\n  {workbook_path}")
+
+            if self.delete_filtered_after_combined_var.get():
+                self._delete_filtered_csvs_from_run({folder_name: case_csvs})
+
         if errors:
             messagebox.showerror(
                 "Batch processing completed with errors",
-                "Some cases failed. Check the log window for details.",
+                (
+                    f"Workbook created:\n{workbook_path}\n\nSome cases failed; see log for details."
+                    if workbook_path
+                    else "Some cases failed. Check the log window for details."
+                ),
             )
-        else:
+        elif workbook_path:
             messagebox.showinfo(
                 "Batch processing complete",
-                "All detected ACCA/DC cases in the folder have been processed.",
+                f"Workbook created:\n{workbook_path}",
             )
+        else:
+            messagebox.showwarning("Nothing processed", "No filtered CSVs were produced.")
 
     # ---------- Multi-folder mode ---------- #
 
@@ -535,6 +583,7 @@ class CaseProcessingTab(ttk.Frame):
             log_func=self.log,
             threshold=threshold,
             report_type=self.report_type_var.get(),
+            workbook_name=self._workbook_name(single_folder=False),
         )
 
         if workbook_path:
