@@ -24,10 +24,10 @@ PRETTY_CASE_TITLES = tuple(PRETTY_TO_CANONICAL)
 
 # Filename matching is case-insensitive.
 TARGET_PATTERNS = {
-    "ACCA_LongTerm": "ACCA_LongTerm",
-    "ACCA_P1,2,4,7": "ACCA_P1,2,4,7",
-    "DCwACver_P1-7": "DCwACver_P1-7",
-    "Extreme_DoubleBus": "BusBranch",
-    "Extreme_BusBranch": "DBL_Bus",
-    "Extreme_P1P7": "P1+P7",
+    "ACCA_LongTerm": ("ACCA_LongTerm",),
+    "ACCA_P1,2,4,7": ("ACCA_P1,2,4,7",),
+    "DCwACver_P1-7": ("DCwACver_P1-7",),
+    "Extreme_DoubleBus": ("BusBranch", "EE_BusBranch"),
+    "Extreme_BusBranch": ("DBL_Bus", "EE_DBL_Bus"),
+    "Extreme_P1P7": ("P1+P7", "EE_P1+P7"),
 }
