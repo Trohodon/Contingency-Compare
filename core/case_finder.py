@@ -13,9 +13,12 @@ def _find_pwb_files(folder: str):
 def _classify_case(filename: str) -> str:
     """Return the case type label based on TARGET_PATTERNS, or 'Other'."""
     filename_lower = filename.lower()
-    for label, pattern in TARGET_PATTERNS.items():
-        if pattern.lower() in filename_lower:
-            return label
+    for label, patterns in TARGET_PATTERNS.items():
+        if isinstance(patterns, str):
+            patterns = (patterns,)
+        for pattern in patterns:
+            if str(pattern).lower() in filename_lower:
+                return label
     return "Other"
 
 
