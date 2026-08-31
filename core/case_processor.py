@@ -19,12 +19,29 @@ REQUIRED_FILTERED_COLUMNS = [
     "LimViolCat",
 ]
 
+MAX_FILTERED_PATH_LENGTH = 240
+
 
 def _make_filtered_path(original_csv: str) -> str:
     base, ext = os.path.splitext(original_csv)
     if not ext:
         ext = ".csv"
-    return f"{base}_Filtered{ext}"
+    filtered_path = f"{base}_Filtered{ext}"
+    if len(os.path.abspath(filtered_path)) <= MAX_FILTERED_PATH_LENGTH:
+        return filtered_path
+
+    folder = os.path.dirname(base)
+    name = os.path.basename(base)
+    suffix = "_Filtered"
+    budget = (
+        MAX_FILTERED_PATH_LENGTH
+        - len(os.path.abspath(folder))
+        - len(os.sep)
+        - len(suffix)
+        - len(ext)
+    )
+    shortened = name[: max(12, budget)].rstrip(" .")
+    return os.path.join(folder, f"{shortened}{suffix}{ext}")
 
 
 def _ensure_required_columns(df: pd.DataFrame) -> pd.DataFrame:
@@ -41,7 +58,12 @@ def _save_filtered_csv(csv_path: str, filtered_data: pd.DataFrame, log_func=None
     if parent:
         os.makedirs(parent, exist_ok=True)
     filtered_data = _ensure_required_columns(filtered_data)
-    filtered_data.to_csv(filtered_csv, index=False)
+    try:
+        filtered_data.to_csv(filtered_csv, index=False)
+    except OSError as e:
+        if log_func:
+            log_func(f"ERROR saving filtered CSV to:\n  {filtered_csv}\n  {e}")
+        raise
 
     if log_func:
         log_func(f"Filtered CSV saved to:\n  {filtered_csv}")
@@ -230,7 +252,7 @@ def post_process_csv(
 
     except Exception as e:
         if log_func:
-            log_func(f"(Could not read CSV for header inspection: {e})")
+            log_func(f"ERROR during CSV post-processing: {e}")
         return None
 
 
