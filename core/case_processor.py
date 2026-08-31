@@ -37,6 +37,9 @@ def _ensure_required_columns(df: pd.DataFrame) -> pd.DataFrame:
 
 def _save_filtered_csv(csv_path: str, filtered_data: pd.DataFrame, log_func=None) -> str:
     filtered_csv = _make_filtered_path(csv_path)
+    parent = os.path.dirname(os.path.abspath(filtered_csv))
+    if parent:
+        os.makedirs(parent, exist_ok=True)
     filtered_data = _ensure_required_columns(filtered_data)
     filtered_data.to_csv(filtered_csv, index=False)
 
@@ -105,13 +108,18 @@ def post_process_csv(
     try:
         if not os.path.exists(csv_path) or os.path.getsize(csv_path) == 0:
             if log_func:
-                log_func("ViolationCTG export was empty; creating empty filtered CSV.")
+                log_func("ViolationCTG export was missing or empty; creating empty filtered CSV.")
             empty = pd.DataFrame(columns=REQUIRED_FILTERED_COLUMNS)
             return _save_filtered_csv(csv_path, empty, log_func=log_func)
 
         # Skip the first row because it only has "ViolationCTG" in one column.
         try:
             raw = pd.read_csv(csv_path, header=None, skiprows=1)
+        except FileNotFoundError:
+            if log_func:
+                log_func("ViolationCTG export file was not found; creating empty filtered CSV.")
+            empty = pd.DataFrame(columns=REQUIRED_FILTERED_COLUMNS)
+            return _save_filtered_csv(csv_path, empty, log_func=log_func)
         except pd.errors.EmptyDataError:
             if log_func:
                 log_func("ViolationCTG export has no header/data rows; creating empty filtered CSV.")
