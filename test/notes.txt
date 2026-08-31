@@ -1,9 +1,0 @@
-UpdateDeviceData Notes
-UpdateDeviceData rebuilds the DeviceData and TFMR_DeviceData tables using DeviceData_All and TFMR_DeviceData_All. The model build form already calls ModelWriter.UpdateDeviceData, so I left that call unchanged.
-The old code was duplicated in both ModelWriter and AuxWriter. For each source row, it reopened the target table, ran a DLookup, and then used DoCmd.RunSQL to insert or update the record. Since the tables are cleared and rebuilt each time, this creates a lot of repeated Access work and is a likely contributor to the database growing during a build.
-I moved the actual rebuild logic into one shared routine:
-DeviceDataUpdater.RefreshDeviceDataTables()
-Both ModelWriter.UpdateDeviceData and AuxWriter.UpdateDeviceData still exist, but now they just call the shared routine.
-The new version clears the working tables with db.Execute, opens each source and target recordset once, and then uses FindFirst, AddNew, Edit, and Update while looping through the source data.
-The first branch_id or two_winding_id creates the destination row. If the same ID appears again, only fromnum and tonum are updated, and only when the new source value is not blank.
-
