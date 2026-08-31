@@ -21,7 +21,9 @@ CASE_TYPES = [
     ("ACCA LongTerm", "acca_longterm"),
     ("ACCA", "acca"),
     ("DCwAC", "dcwac"),
-    ("AUXapplied", "auxapplied"),
+    ("Double Bus", "double_bus"),
+    ("Bus + Branch", "bus_branch"),
+    ("P1 + P7", "p1_p7"),
 ]
 
 
@@ -358,19 +360,17 @@ class TrendsView(ttk.Frame):
         """
         Returns dict:
         {
-          'acca':   {'case': sheet_name, 'rows': [(issue, pct), ...]},
-          'dcwac':  {'case': sheet_name, 'rows': [...]},
-          'acca_longterm': ...
+          case_type_key: {'case': sheet_name, 'rows': [(issue, pct), ...]},
         }
         """
         result = {k: {"case": sheet_name, "rows": []} for _, k in CASE_TYPES}
 
         # We need to find blocks like:
         # header row containing "Resulting Issue" and "Percent Loading"
-        # AND a nearby row above that tells case type ("ACCA", "DCwAC", "ACCA LongTerm")
+        # AND a nearby row above that tells case type.
         #
         # The combined violation sheets you showed usually have a big merged header cell
-        # with "ACCA" or "DCwAC" above the table.
+        # with the case type above the table.
 
         max_row = ws.max_row
         max_col = min(ws.max_column, 30)
@@ -444,8 +444,12 @@ class TrendsView(ttk.Frame):
                 return "acca_longterm"
             if "dcwac" in j:
                 return "dcwac"
-            if "auxapplied" in j:
-                return "auxapplied"
+            if "double bus" in j:
+                return "double_bus"
+            if "bus + branch" in j or "bus branch" in j:
+                return "bus_branch"
+            if "p1 + p7" in j or "p1+p7" in j:
+                return "p1_p7"
             # important: "ACCA" appears in "ACCA LongTerm", so check longterm first
             if "acca" in j:
                 return "acca"
