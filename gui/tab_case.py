@@ -15,7 +15,7 @@ class CaseProcessingTab(ttk.Frame):
     """
     GUI tab for:
       - Single case processing
-      - Folder scan + processing of ACCA/DC cases
+      - Folder scan + processing of normal and Extreme Events cases
       - Multi-folder mode: each subfolder is a scenario to compare
     """
 
@@ -78,7 +78,7 @@ class CaseProcessingTab(ttk.Frame):
         )
         self.single_btn.grid(row=2, column=0, columnspan=3, pady=(8, 0), sticky="w")
 
-        folder = ttk.LabelFrame(self, text="Folder processing (ACCA/DC cases)")
+        folder = ttk.LabelFrame(self, text="Folder processing (normal / Extreme Events cases)")
         folder.pack(side=tk.TOP, fill=tk.BOTH, expand=False, padx=10, pady=5)
 
         ttk.Label(folder, text="Selected folder:").grid(row=0, column=0, sticky="w")
@@ -92,7 +92,7 @@ class CaseProcessingTab(ttk.Frame):
 
         self.process_folder_btn = ttk.Button(
             folder,
-            text="Process ACCA/DC cases in folder / subfolders",
+            text="Process normal / Extreme Events cases in folder / subfolders",
             command=self.run_export_folder,
         )
         self.process_folder_btn.grid(
@@ -372,7 +372,7 @@ class CaseProcessingTab(ttk.Frame):
         )
 
         if cases and not target_cases:
-            self.log("No recognized ACCA/DC cases found directly in this folder.")
+            self.log("No recognized normal / Extreme Events cases found directly in this folder.")
 
         if not subdirs:
             self.log("No recognized cases or scenario subfolders found in this folder.")
@@ -418,7 +418,7 @@ class CaseProcessingTab(ttk.Frame):
             else:
                 messagebox.showwarning(
                     "No target cases found",
-                    "No recognized ACCA / DCwAC / AUXapplied cases detected.",
+                    "No recognized normal / Extreme Events cases detected.",
                 )
         finally:
             self._set_running(False)
@@ -429,11 +429,11 @@ class CaseProcessingTab(ttk.Frame):
         if not self.target_cases:
             messagebox.showwarning(
                 "No target cases found",
-                "No recognized ACCA / DCwAC / AUXapplied cases detected.",
+                "No recognized normal / Extreme Events cases detected.",
             )
             return
 
-        self.log("\n=== Batch processing ACCA/DC cases in folder ===")
+        self.log("\n=== Batch processing normal / Extreme Events cases in folder ===")
         if self.report_type_var.get() == "thermal":
             self.log(f"Percent loading threshold: {threshold:.2f}%")
         else:
@@ -533,7 +533,7 @@ class CaseProcessingTab(ttk.Frame):
 
             _, target_cases = scan_folder(scenario_folder, self.log)
             if not target_cases:
-                self.log(f"  [{sub}] No ACCA/DC cases found; skipping.")
+                self.log(f"  [{sub}] No normal / Extreme Events cases found; skipping.")
                 continue
 
             case_csvs = {}
