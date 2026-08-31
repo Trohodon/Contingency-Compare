@@ -316,7 +316,7 @@ class HelpTab(ttk.Frame):
                 ("h1", "Straight Comparison (all scenarios)"),
                 ("p", "This sheet compares ALL original scenario sheets side-by-side (no pair deltas)."),
                 ("h2", "What it includes"),
-                ("bullet", "Blue-block case type sections (ACCA LongTerm / ACCA / DCwAC / AUXapplied)"),
+                ("bullet", "Blue-block case type sections (ACCA LongTerm / ACCA / DCwAC / Double Bus / Bus + Branch / P1 + P7)"),
                 ("bullet", "One column per scenario (sheet)"),
                 ("bullet", "Threshold applies to the max across scenarios"),
                 ("bullet", "+/- outline grouping can collapse by Resulting Issue (optional)"),
