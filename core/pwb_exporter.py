@@ -15,6 +15,12 @@ VIOLATION_CTG_EXPORT_FIELDS = [
 ]
 
 
+def _write_empty_violation_ctg_csv(csv_path: str) -> None:
+    with open(csv_path, "w", encoding="utf-8", newline="") as f:
+        f.write("ViolationCTG\n")
+        f.write(",".join(VIOLATION_CTG_EXPORT_FIELDS) + "\n")
+
+
 def _field_list_for_script(fields) -> str:
     return "[" + ",".join(str(f).strip() for f in fields if str(f).strip()) + "]"
 
@@ -130,6 +136,12 @@ def export_violation_ctg(pwb_path: str, log_func, threshold: float = 0.0) -> str
         (err,) = simauto.RunScriptCommand(cmd)
         if err:
             raise RuntimeError(f"SaveData(ViolationCTG) error: {err}")
+        if not os.path.isfile(csv_out):
+            log_func(
+                "WARNING: PowerWorld did not create the ViolationCTG CSV. "
+                "Creating an empty export so processing can continue."
+            )
+            _write_empty_violation_ctg_csv(csv_out)
         log_func("CSV export complete for ViolationCTG.")
 
     finally:
