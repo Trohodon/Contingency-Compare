@@ -148,7 +148,8 @@ def _build_simple_workbook(
         with writer as xls_writer:
             for folder_name, case_map in folder_to_case_csvs.items():
                 dfs = []
-                for label in TARGET_PATTERNS:
+                labels_to_write = [label for label in TARGET_PATTERNS if label in case_map]
+                for label in labels_to_write:
                     csv_path = case_map.get(label)
                     if csv_path:
                         try:
@@ -231,10 +232,12 @@ def build_workbook(
     # Build scenario DataFrames
     # ---------------------------
     scenario_data = {}  # folder_name -> combined DataFrame
+    scenario_case_labels = {}  # folder_name -> ordered case labels present in this run
 
     for folder_name, case_map in folder_to_case_csvs.items():
         dfs = []
-        for label in TARGET_PATTERNS:
+        labels_to_write = [label for label in TARGET_PATTERNS if label in case_map]
+        for label in labels_to_write:
             csv_path = case_map.get(label)
             if not csv_path:
                 continue
@@ -254,6 +257,7 @@ def build_workbook(
 
         if dfs:
             scenario_data[folder_name] = pd.concat(dfs, ignore_index=True)
+            scenario_case_labels[folder_name] = labels_to_write
 
     if not scenario_data:
         if log_func:
@@ -325,7 +329,8 @@ def build_workbook(
         # Shift everything down by 1 row
         current_row = 2
 
-        for label in TARGET_PATTERNS:
+        labels_to_write = scenario_case_labels.get(folder_name) or list(TARGET_PATTERNS)
+        for label in labels_to_write:
             block_df = df[df["CaseType"] == label].copy()
             pretty_name = CANONICAL_TO_PRETTY.get(label, label)
             if report_type == "thermal":
