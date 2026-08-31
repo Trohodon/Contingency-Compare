@@ -6,7 +6,9 @@ CASE_TYPE_DEFINITIONS = (
     ("ACCA_LongTerm", "ACCA LongTerm"),
     ("ACCA_P1,2,4,7", "ACCA"),
     ("DCwACver_P1-7", "DCwAC"),
-    ("AUXapplied", "AUXapplied"),
+    ("Extreme_DoubleBus", "Double Bus"),
+    ("Extreme_BusBranch", "Bus + Branch"),
+    ("Extreme_P1P7", "P1 + P7"),
 )
 
 CASE_TYPES_CANONICAL = [canonical for canonical, _pretty in CASE_TYPE_DEFINITIONS]
@@ -22,5 +24,10 @@ PRETTY_CASE_TITLES = tuple(PRETTY_TO_CANONICAL)
 
 # Filename matching is case-insensitive.
 TARGET_PATTERNS = {
-    canonical: canonical for canonical in CASE_TYPES_CANONICAL
+    "ACCA_LongTerm": "ACCA_LongTerm",
+    "ACCA_P1,2,4,7": "ACCA_P1,2,4,7",
+    "DCwACver_P1-7": "DCwACver_P1-7",
+    "Extreme_DoubleBus": "BusBranch",
+    "Extreme_BusBranch": "DBL_Bus",
+    "Extreme_P1P7": "P1+P7",
 }
