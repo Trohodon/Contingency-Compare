@@ -1,4 +1,5 @@
 import os
+import hashlib
 import pandas as pd
 
 from .pwb_exporter import export_violation_ctg
@@ -32,7 +33,8 @@ def _make_filtered_path(original_csv: str) -> str:
 
     folder = os.path.dirname(base)
     name = os.path.basename(base)
-    suffix = "_Filtered"
+    digest = hashlib.sha1(os.path.abspath(original_csv).encode("utf-8")).hexdigest()[:8]
+    suffix = f"_{digest}_Filtered"
     budget = (
         MAX_FILTERED_PATH_LENGTH
         - len(os.path.abspath(folder))
