@@ -1,0 +1,19 @@
+The timing report showed the PowerWorld contingency file taking about 2 min 28 sec, which was the biggest slow step left after the model writer changes. This step only changes the RawWriter contingency-file path.
+
+The biggest issue was repeated Access work inside the line loop. The old code opened every Line row, filtered inactive/non-contingency rows in VBA, then called `assessQueueDependency` for each included line. That function queried the Line table again just to get Queue and NotQueue, even though those values were already available in the current record.
+
+The branch lookup was also expensive. For every line, the code deleted and recreated a saved QueryDef called `filteredBranch`, opened it, then filtered branch dates inside VBA. That meant Access was constantly creating and deleting saved queries during the build.
+
+Queue project checks had a similar problem. If several lines used the same Queue or NotQueue number, `QueuedProjects` was queried again every time.
+
+The new version pushes more of this work into the initial SQL. The Line recordset now only opens active rows marked as contingencies, and the Branch query only returns active branches for the current line. Both are opened as read-only snapshots.
+
+Queue and NotQueue are now passed directly from the current Line record into the new shared queue-dependency helper, so the extra Line lookup is removed. Queue project results are also cached for the current build so the same queue decision does not have to be queried repeatedly.
+
+The old `assessQueueDependency(lineID, ...)` function is still there for other RawWriter routines, but it now uses the same shared helper.
+
+Output behavior should stay the same. File names, AUX formatting, contingency labels, branch outage formatting, regional bus logic, CF Study behavior, and Queue/NotQueue rules were not intentionally changed. NotQueue still takes priority over Queue.
+
+Main thing to test is the same case that previously took 2 min 28 sec for the PowerWorld contingency file. Compile VBA, run the build, compare the new timing, and compare the generated AUX files with the old output. Also spot-check a normal line, Queue line, NotQueue line, ignore-after case, and Include Without IA case.
+
+If the output matches and the contingency build time drops, Step 3 is good.
