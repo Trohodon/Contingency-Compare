@@ -120,14 +120,12 @@ def export_violation_ctg(pwb_path: str, log_func, threshold: float = 0.0) -> str
             + ", ".join(VIOLATION_CTG_EXPORT_FIELDS)
         )
         threshold = _safe_threshold(threshold)
-        filter_name = _try_define_threshold_filter(simauto, threshold, log_func)
-        if filter_name:
+        filter_name = ""
+        if threshold:
             log_func(
-                f"PowerWorld export filter active: {filter_name} "
-                f"(LimViolPct >= {threshold:.2f})."
+                f"Percent loading threshold requested: {threshold:.2f}%; "
+                "threshold will be applied after export so removed rows can be logged."
             )
-        elif threshold:
-            log_func(f"Percent loading threshold requested: {threshold:.2f}%")
         clean_csv = csv_out.replace("\\", "/")  # avoid backslash issues in script
         cmd = (
             f'SaveData("{clean_csv}", CSV, ViolationCTG, '
