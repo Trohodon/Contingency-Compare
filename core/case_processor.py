@@ -105,6 +105,33 @@ def apply_percent_threshold(df: pd.DataFrame, threshold: float, log_func=None):
     return filtered_df, removed
 
 
+def _row_key(row) -> tuple[str, str, str]:
+    return (
+        str(row.get("CTGLabel", "") or ""),
+        str(row.get("LimViolID", "") or ""),
+        str(row.get("LimViolPct", "") or ""),
+    )
+
+
+def _log_removed_row_details(before_df, after_df, reason: str, log_func=None, limit: int = 25) -> None:
+    if not log_func or before_df is None or after_df is None:
+        return
+    if before_df.empty:
+        return
+
+    removed_index = before_df.index.difference(after_df.index)
+    if len(removed_index) == 0:
+        return
+
+    log_func(f"Rows removed by {reason} details:")
+    for shown, (_idx, row) in enumerate(before_df.loc[removed_index].iterrows(), start=1):
+        if shown > limit:
+            log_func(f"  ... {len(removed_index) - limit} more removed rows not shown")
+            break
+        cont, issue, pct = _row_key(row)
+        log_func(f"  - CTGLabel={cont} | LimViolID={issue} | LimViolPct={pct}")
+
+
 def post_process_csv(
     csv_path: str,
     dedup_enabled: bool,
@@ -174,6 +201,7 @@ def post_process_csv(
         if log_func:
             log_func("\nRemoving configured excluded contingencies...")
 
+        before_filter = data.copy()
         data, removed_excluded_contingencies = apply_contingency_name_exclusion(
             data,
             log_func=log_func,
@@ -181,22 +209,36 @@ def post_process_csv(
 
         if log_func:
             log_func(f"Rows removed by contingency name exclusion: {removed_excluded_contingencies}")
+        _log_removed_row_details(
+            before_filter,
+            data,
+            "contingency name exclusion",
+            log_func=log_func,
+        )
 
         # 1) Row filter with chosen categories
         if log_func:
             cats_txt = ", ".join(sorted(keep_categories)) if keep_categories else "NONE"
             log_func(f"\nApplying row filter for LimViolCat categories: {cats_txt}")
 
+        before_filter = data.copy()
         filtered_data, removed_rows = apply_row_filter(
             data, keep_values=keep_categories, log_func=log_func
         )
 
         if log_func:
             log_func(f"Rows removed by row filter: {removed_rows}")
+        _log_removed_row_details(
+            before_filter,
+            filtered_data,
+            "LimViolCat row filter",
+            log_func=log_func,
+        )
 
         if log_func and skip_voltage_46_33kv:
             log_func('\nSkipping voltage Resulting Issues starting with "1" or "2" (46 kV / 33 kV)...')
 
+        before_filter = filtered_data.copy()
         filtered_data, removed_voltage_level_rows = apply_voltage_resulting_issue_exclusion(
             filtered_data,
             enabled=skip_voltage_46_33kv,
@@ -205,11 +247,18 @@ def post_process_csv(
 
         if log_func and skip_voltage_46_33kv:
             log_func(f"Rows removed by voltage level exclusion: {removed_voltage_level_rows}")
+        _log_removed_row_details(
+            before_filter,
+            filtered_data,
+            "voltage level exclusion",
+            log_func=log_func,
+        )
 
         # 1b) Percent loading threshold before sorting/deduping.
         if log_func:
             log_func(f"\nApplying percent loading threshold: {float(threshold):.2f}%")
 
+        before_filter = filtered_data.copy()
         filtered_data, removed_pct_rows = apply_percent_threshold(
             filtered_data,
             threshold=threshold,
@@ -218,6 +267,12 @@ def post_process_csv(
 
         if log_func:
             log_func(f"Rows removed by percent threshold: {removed_pct_rows}")
+        _log_removed_row_details(
+            before_filter,
+            filtered_data,
+            "percent threshold",
+            log_func=log_func,
+        )
 
         # 2) v2 LimViolID behavior: keep all, sort max first per LimViolID (for Excel dropdown grouping)
         if dedup_enabled:
