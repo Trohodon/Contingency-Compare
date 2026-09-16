@@ -1,0 +1,541 @@
+//--------------------------------------------------------------------------------
+// THE FOLLOWING SECTION CONTAINS OPTIONS FOR THE CONTINGENCY ANALYSIS.
+//--------------------------------------------------------------------------------
+DATA (CTG_Options_Value, [VariableName,ValueField],AUXDEF,YES)
+{
+"AlwaysReport"                         "YES"
+"AlwaysBranchInc"                      "5"
+"AlwaysHighVoltInc"                    "0.05"
+"AlwaysInterfaceInc"                   "999"
+"AlwaysLowVoltDec"                     "0.05"
+"NeverReport"                          "NO"
+"NeverBranchInc"                       "0"
+"NeverHighVoltInc"                     "0"
+"NeverInterfaceInc"                    "0"
+"NeverLowVoltDec"                      "0"
+"VoltChangePercent"                    "NO"
+"MonDiscBus"                           "NO"
+"DisableGenDropOverlap"                "NO"
+"AGCToleranceMVA"                      "5"
+"AGCTolerance"                         "0.05"
+"MakeUpPower"                          "Area Part Factors"
+"TSModelMaxDelay"                      "3600"
+"TSModelsTrip"                         ""
+"TSModelsMonitor"                      ""
+"IgnoreRASIfTrueInRef"                 "NO"
+"DynAssignSlack"                       "NO"
+"MVAConvergenceTol"                    "Default"
+"PUConvergenceTol"                     "Default"
+"DisableOptMult"                       "Default"
+"MaxItr"                               "Default"
+"MinVoltILoad"                         "Default"
+"MinVoltSLoad"                         "Default"
+"EnforceGenMWLimits"                   "Default"
+"LTCTapBalance"                        "Default"
+"ChkPhaseShifters"                     "Default"
+"ChkSVCs"                              "Default"
+"ChkShunts"                            "Default"
+"ChkTaps"                              "Default"
+"DisableGenMVRCheck"                   "Default"
+"ChkVarBackOffImmediately"             "Default"
+"ChkVarImmediately"                    "Default"
+"MaxItrVoltLoop"                       "Default"
+"MinLTCSense"                          "Default"
+"ModelPSDiscrete"                      "Default"
+"PreventOscillations"                  "Default"
+"ShuntInner"                           "Default"
+}
+DATA (CTG_Options, [CTGResultStorageFile:1,CTGSaveFieldNormalName,CTGSaveInHardDrive,FilterName,
+    FilterName:1,MaxCount:1,MaxCount,CTG_WhatToDoWithBC,CTG_BCFlows,
+    CTG_BCHighVolt,CTG_BCInterface,CTG_BCLowVolt,IslandTotalBus,BGLoadMW,Include,
+    CTGTPMonitorOnlySuperBus,CTG_BCVoltSensThreshold,CTG_BCVoltSensMonitorFilter,
+    CTG_BCVoltSensReporting,CTG_AlwaysSaveResults,
+    WhatActuallyOccuredContingencyDescription,CTGSaveInPWB,CTGStoreLODFS,CTGLabel,
+    CTGLabel:1,CTG_CalculationMethod,CTGSolutionOptions,OPF_SolutionType,
+    IterateOnActionStatus,AllowAmpLimits,ReactivePowerModel,CtgFileName:1,
+    CtgFileName:2,PreventIslandWithoutEnoughGen,RetryRobustSolutionProcess,
+    RTCTGAnaMode,ScreenAllow,ScreenIncludeVoltage,ScreenMaxItr,ScreenMethod,
+    ScreenNum,ScreenNum:2,ScreenNum:3,ScreenNum:1,ScreenIncludeVoltage:1,
+    CTG_ReportMaxVioPerType,CTG_ReportAll,CTG_ReportBaseCaseOutages,
+    CTG_ReportBranchChangeFlowVio,CTG_ReportBusHighVolt,CTG_ReportBusLowVolt,
+    CTG_ReportBusVoltageExtremes,CTG_ReportCaseSummary,CTG_ReportCondense,
+    CTG_ReportCreateTables,CTG_ReportFieldSeparator,CTG_ReportIDBusBy,
+    CTG_ReportInactiveViolations,CTG_ReportInterfaceChangeFlowVio,
+    CTG_ReportInterfaceFlow,CTG_ReportLargestBranchFlow,
+    CTG_ReportLargestInterfaceFlow,CTG_ReportLineFlow,CTG_ReportMonitoredAreas,
+    CTG_ReportMonitoredZones,CTG_ReportOnlyNonZero,CTG_ReportOnlyViolations,
+    CTG_ReportOptionSettings,CTG_ReportVoltDecreaseVio,CTG_ReportVoltIncreaseVio],AUXDEF,YES)
+{
+"" "NO " "NO " "None" "None" 5 5 "" 2" 5.000 0.050 0.000 0.050 10 50.000 "NO " "YES" 10.000 "" "NO " "NO " "PRETTY NAME_NUMBER" "YES" " 0" "" "" "AC" "AllowAllIslands" "NO" "NO" "NO" "NO" "Ignore" "" "NO" "NO" "NO" "NO" "YES" 2 "DC" 20 20 10 10 "NO" ... 9999 "NO" "NO" "NO" "YES" "YES" "NO" "NO" "NO" "NO" ... "NO" "YES" "NO" "NO" "YES" "NO" "NO" "NO" "NO" "NO" "NO"
+
+//--------------------------------------------------------------------------------
+// THE FOLLOWING ARE THE LIMIT MONITORING SETTINGS.
+//--------------------------------------------------------------------------------
+DATA (Limit_Monitoring_Options, [LMS_IgnoreRadial])
+{
+"NO "
+}
+
+DATA (LimitSet, [LSNum, LSName, LSPULow, LSPUHigh, LSLinePercent, LSInterfacePercent,
+    LSInterfacePercent:1, LSLineRateSet, LSLineRateSet:1, LSInterfaceRateSet,
+    LSInterfaceRateSet:1, LSDisabled, LSAmpMVA, Selected, CTG_WhatToDoWithBC:1,
+    CTG_WhatToDoWithBC:2, CTG_WhatToDoWithBC:3, CTG_BCFlows:1, CTG_BCFlows:2,
+    CTG_BCLowVolt:1, CTG_BCLowVolt:2, CTG_BCHighVolt:1, CTG_BCHighVolt:2,
+    CTG_BCInterface:1, CTG_BCInterface:2, LSEndMonitor, LSLowSuspectCutoff,
+    LSUseLimitCost, LSBusLowRateSet, LSBusHighRateSet, LSCtgBusLowRateSet,
+    LSCtgBusHighRateSet, LSCtgPULow, LSCtgPUHigh, CTG_BCDiscBusReporting,
+    LSGroupSpecificAdvancedLimMon, DataMaintainer, DataMaintainerAssign,
+    ScreenPercent, ScreenPercent:1, ScreenPercent:3, ScreenTol, ScreenTol:1,
+    ScreenTol:2, LSBusPairPercent, LSBusPairRateSet, LSBusPairRateSet:1, ScreenMult], AUXDEF, YES)
+{
+    1 "Default"       0.950       1.050     9990.000     9999.000     100.000 "A: RATE1" "B: RATE2" "A" "A" "NO " "MVA" "NO " "NO " "NO" "NO"      0.000     999.000     0.000     2.000     0.000     2.000     0.000     999.000 "Higher"     0.000 "NO" "A" "A" "A" "B"     0.950     1.100 "NO" "NO" ...     90.000     90.000     0.010     0.010     0.010     100.000 "A" "A"     1.000
+    2 "DoNotMon"      0.950       1.050       90.000      100.000     100.000 "A: RATE1" "B: RATE2" "A" "A" "YES" "MVA" "NO " "NO " "NO" "NO"      0.000     999.000     0.000     2.000     0.000     2.000     0.000     999.000 "Higher"     0.000 "NO" "A" "A" "A" "B"     0.950     1.100 "NO" "NO" ...     90.000     90.000     0.010     0.010     0.010     100.000 "A" "A"     1.000
+}
+
+DATA (Area, [AreaNum,BGReportLimits,BGReportLimMinKV,BGReportLimMaxKV])
+{
+        205 "NO "     0.0000   9999.0000
+        332 "NO "     0.0000   9999.0000
+        340 "YES"   100.0000   9999.0000
+        341 "NO "     0.0000   9999.0000
+        342 "YES"   100.0000   9999.0000
+        343 "NO "    30.0000   9999.0000
+        344 "YES"   100.0000   9999.0000
+        345 "NO "     0.0000   9999.0000
+        346 "YES"   100.0000   9999.0000
+        347 "NO "     0.0000   9999.0000
+        349 "NO "     0.0000   9999.0000
+        351 "NO "     0.0000   9999.0000
+        352 "NO "     0.0000   9999.0000
+        353 "NO "     0.0000   9999.0000
+        354 "NO "     0.0000   9999.0000
+        355 "NO "     0.0000   9999.0000
+        401 "NO "     0.0000   9999.0000
+        502 "NO "     0.0000   9999.0000
+        520 "NO "     0.0000   9999.0000
+}
+
+DATA (FILTER, [ObjectType,FilterName,FilterLogic,FilterPre,Enabled],,YES)
+{
+"ViolationCTG" "CPLE" "OR" "NO " "YES"
+    <SUBDATA Condition>
+        LV_AreaNameFrom = "CPLE"
+        LV_AreaNameTo = "CPLE"
+    </SUBDATA>
+"ViolationCTG" "DUK" "OR" "NO " "YES"
+    <SUBDATA Condition>
+        LV_AreaNameFrom = "DUK"
+        LV_AreaNameTo = "DUK"
+    </SUBDATA>
+"ViolationCTG" "SC" "OR" "NO " "YES"
+    <SUBDATA Condition>
+        LV_AreaNameFrom = "SC"
+        LV_AreaNameTo = "SC"
+    </SUBDATA>
+"ViolationCTG" "SCEG" "OR" "NO " "YES"
+    <SUBDATA Condition>
+        LV_AreaNameFrom = "SCEG"
+        LV_AreaNameTo = "SCEG"
+    </SUBDATA>
+"ViolationCTG" "SOCO" "OR" "NO " "YES"
+    <SUBDATA Condition>
+        LV_AreaNameFrom = "SOCO"
+        LV_AreaNameTo = "SOCO"
+    </SUBDATA>
+"ViolationCTG" "No_Violations" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        CTGViol = 0
+    </SUBDATA>
+"ViolationCTG" "SKIPPED" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        CTGSkip startswith "YES"
+    </SUBDATA>
+"ViolationCTG" "SKIPPED_NoViolations" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        CTGSkip startswith "YES"
+        CTGViol = 0
+    </SUBDATA>
+"ViolationCTG" "NOT_Solved" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        CTGSolved startswith "NO"
+    </SUBDATA>
+"ViolationCTG" "ViolExist" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        CTGViol > 0
+    </SUBDATA>
+"ViolationCTG" "NotSkipped_NotSolved" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        CTGSolved startswith "NO"
+        CTGSkip = "NO"
+    </SUBDATA>
+"ViolationCTG" "P1" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        CTG_Name contains "P1_"
+        CTG_Name notcontains " + "
+    </SUBDATA>
+"ViolationCTG" "P2" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        CTG_Name contains "P2_"
+        CTG_Name notcontains " + "
+    </SUBDATA>
+"Contingency" "P1&P2" "OR" "NO " "YES"
+    <SUBDATA Condition>
+        _UseAnotherFilter meets "P1"
+        _UseAnotherFilter meets "P2"
+    </SUBDATA>
+"ViolationCTG" "P3/P6" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        CTG_Name contains " + "
+        CTG_Name notcontains "LT_"
+    </SUBDATA>
+"ViolationCTG" "P4/P5" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        CTG_Name contains "P4/P5_"
+    </SUBDATA>
+"ViolationCTG" "P7" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        CTG_Name contains "P7_"
+    </SUBDATA>
+"ViolationCTG" "LongTerm" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        CTG_Name contains " + "
+        CTG_Name contains "LT_"
+    </SUBDATA>
+"ViolationCTG" "CPLE_P1" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        _UseAnotherFilter meets "CPLE"
+        _UseAnotherFilter meets "P1"
+    </SUBDATA>
+"ViolationCTG" "DUK_P1" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        _UseAnotherFilter meets "DUK"
+        _UseAnotherFilter meets "P1"
+    </SUBDATA>
+"ViolationCTG" "SC_P1" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        _UseAnotherFilter meets "SC"
+        _UseAnotherFilter meets "P1"
+    </SUBDATA>
+"ViolationCTG" "SCEG_P1" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        _UseAnotherFilter meets "SCEG"
+        _UseAnotherFilter meets "P1"
+    </SUBDATA>
+"ViolationCTG" "SOCO_P1" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        _UseAnotherFilter meets "SOCO"
+        _UseAnotherFilter meets "P1"
+    </SUBDATA>
+"ViolationCTG" "CPLE_P2" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        _UseAnotherFilter meets "CPLE"
+        _UseAnotherFilter meets "P2"
+    </SUBDATA>
+"ViolationCTG" "DUK_P2" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        _UseAnotherFilter meets "DUK"
+        _UseAnotherFilter meets "P2"
+    </SUBDATA>
+"ViolationCTG" "SC_P2" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        _UseAnotherFilter meets "SC"
+        _UseAnotherFilter meets "P2"
+    </SUBDATA>
+"ViolationCTG" "SCEG_P2" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        _UseAnotherFilter meets "SCEG"
+        _UseAnotherFilter meets "P2"
+    </SUBDATA>
+"ViolationCTG" "SOCO_P2" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        _UseAnotherFilter meets "SOCO"
+        _UseAnotherFilter meets "P2"
+    </SUBDATA>
+"ViolationCTG" "CPLE_P3/P6" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        _UseAnotherFilter meets "CPLE"
+        _UseAnotherFilter meets "P3/P6"
+    </SUBDATA>
+"ViolationCTG" "DUK_P3/P6" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        _UseAnotherFilter meets "DUK"
+        _UseAnotherFilter meets "P3/P6"
+    </SUBDATA>
+"ViolationCTG" "SC_P3/P6" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        _UseAnotherFilter meets "SC"
+        _UseAnotherFilter meets "P3/P6"
+    </SUBDATA>
+"ViolationCTG" "SCEG_P3/P6" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        _UseAnotherFilter meets "SCEG"
+        _UseAnotherFilter meets "P3/P6"
+    </SUBDATA>
+"ViolationCTG" "SOCO_P3/P6" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        _UseAnotherFilter meets "SOCO"
+        _UseAnotherFilter meets "P3/P6"
+    </SUBDATA>
+"ViolationCTG" "CPLE_P4/P5" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        _UseAnotherFilter meets "CPLE"
+        _UseAnotherFilter meets "P4/P5"
+    </SUBDATA>
+"ViolationCTG" "DUK_P4/P5" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        _UseAnotherFilter meets "DUK"
+        _UseAnotherFilter meets "P4/P5"
+    </SUBDATA>
+"ViolationCTG" "SC_P4/P5" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        _UseAnotherFilter meets "SC"
+        _UseAnotherFilter meets "P4/P5"
+    </SUBDATA>
+"ViolationCTG" "SCEG_P4/P5" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        _UseAnotherFilter meets "SCEG"
+        _UseAnotherFilter meets "P4/P5"
+    </SUBDATA>
+"ViolationCTG" "SOCO_P4/P5" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        _UseAnotherFilter meets "SOCO"
+        _UseAnotherFilter meets "P4/P5"
+    </SUBDATA>
+"ViolationCTG" "CPLE_P7" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        _UseAnotherFilter meets "CPLE"
+        _UseAnotherFilter meets "P7"
+    </SUBDATA>
+"ViolationCTG" "DUK_P7" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        _UseAnotherFilter meets "DUK"
+        _UseAnotherFilter meets "P7"
+    </SUBDATA>
+"ViolationCTG" "SC_P7" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        _UseAnotherFilter meets "SC"
+        _UseAnotherFilter meets "P7"
+    </SUBDATA>
+"ViolationCTG" "SCEG_P7" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        _UseAnotherFilter meets "SCEG"
+        _UseAnotherFilter meets "P7"
+    </SUBDATA>
+"ViolationCTG" "SOCO_P7" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        _UseAnotherFilter meets "SOCO"
+        _UseAnotherFilter meets "P7"
+    </SUBDATA>
+"ViolationCTG" "CPLE_LongTerm" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        _UseAnotherFilter meets "CPLE"
+        _UseAnotherFilter meets "LongTerm"
+    </SUBDATA>
+"ViolationCTG" "DUK_LongTerm" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        _UseAnotherFilter meets "DUK"
+        _UseAnotherFilter meets "LongTerm"
+    </SUBDATA>
+"ViolationCTG" "SC_LongTerm" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        _UseAnotherFilter meets "SC"
+        _UseAnotherFilter meets "LongTerm"
+    </SUBDATA>
+"ViolationCTG" "SCEG_LongTerm" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        _UseAnotherFilter meets "SCEG"
+        _UseAnotherFilter meets "LongTerm"
+    </SUBDATA>
+"ViolationCTG" "SOCO_LongTerm" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        _UseAnotherFilter meets "SOCO"
+        _UseAnotherFilter meets "LongTerm"
+    </SUBDATA>
+"ViolationCTG" "CPLE_P2,4,5,7" "OR" "NO " "YES"
+    <SUBDATA Condition>
+        _UseAnotherFilter meets "CPLE_P2"
+        _UseAnotherFilter meets "CPLE_P4/P5"
+        _UseAnotherFilter meets "CPLE_P7"
+    </SUBDATA>
+"ViolationCTG" "DUK_P2,4,5,7" "OR" "NO " "YES"
+    <SUBDATA Condition>
+        _UseAnotherFilter meets "DUK_P2"
+        _UseAnotherFilter meets "DUK_P4/P5"
+        _UseAnotherFilter meets "DUK_P7"
+    </SUBDATA>
+"ViolationCTG" "SC_P2,4,5,7" "OR" "NO " "YES"
+    <SUBDATA Condition>
+        _UseAnotherFilter meets "SC_P2"
+        _UseAnotherFilter meets "SC_P4/P5"
+        _UseAnotherFilter meets "SC_P7"
+    </SUBDATA>
+"ViolationCTG" "SCEG_P2,4,5,7" "OR" "NO " "YES"
+    <SUBDATA Condition>
+        _UseAnotherFilter meets "SCEG_P2"
+        _UseAnotherFilter meets "SCEG_P4/P5"
+        _UseAnotherFilter meets "SCEG_P7"
+    </SUBDATA>
+"ViolationCTG" "SOCO_P2,4,5,7" "OR" "NO " "YES"
+    <SUBDATA Condition>
+        _UseAnotherFilter meets "SOCO_P2"
+        _UseAnotherFilter meets "SOCO_P4/P5"
+        _UseAnotherFilter meets "SOCO_P7"
+    </SUBDATA>
+}
+//--------------------------------------------------------------------------------
+// THE FOLLOWING SECTION CONTAINS CUSTOMIZED SETTINGS FOR THE DATA GRID DISPLAYS USED IN CONTINGENCY ANALYSIS.
+//--------------------------------------------------------------------------------
+DATA (DataGrid, [DataGridName,BGDisplayFilter,CaseInfoRowHeight,NonDefaultFont,FontName,
+    FontStyles,SOFontSize,FontColor,VariableName,ConditionType,FilterName,
+    ViewZoomLevel,FrozenColumns,RemoveTrailingZeros])
+{
+"Contingency" "YES"     13 "NO " "Tahoma" ""        8       0 "CTGViol" "High To Low" "" 100.000 -1 "NO "
+    <SUBDATA ColumnInfo>
+        "Selected"                  45  8 1
+        "CTGLabel"                 349  8 1
+        "CTGSkip"                   50  8 1
+        "Category"                  50  8 1
+        "CTGProc"                   50  8 1
+        "CTGSolved"                 50  8 1
+        "Include"                   50  8 1
+        "ScreenAllow"               50  8 1
+        "CtgFileName"               50  8 1
+        "LoadMW"                    50  8 2
+        "GenMW"                     50  8 2
+        "CTGWhatOccurredCount"      50  8 1
+        "CTGWhatOccurredCount:1"    50  8 1
+        "CTGWhatOccurredCount:2"    50  8 1
+        "CTGCustMonViol"             50  8 1
+        "CTGViol"                   50  8 1
+        "CTGViolMaxLine"            50  8 1
+        "CTGViolMinVolt"            50  8 3
+        "CTGViolMaxVolt"            50  8 3
+        "CTGViolMaxInterface"       50  8 1
+        "CTGViolMaxBusPairAngle"    50  8 1
+        "ObjectMemo"               200  8 1
+    </SUBDATA>
+"ContingencyBranch" "NO "     13 "NO " "Tahoma" ""        8       0 "LineMaxPercentContingency" "High To Low" "" 100.000 -1 "NO "
+    <SUBDATA ColumnInfo>
+        "BusNum"                    68  9 1
+        "BusName"                   83  9 1
+        "BusNum:1"                  56  9 1
+        "BusName:1"                 82  9 1
+        "LineCircuit"               34  9 1
+        "LineXfmr"                  30  9 1
+        "CTGViol"                   49  8 2
+        "LineMaxPercentContingency" 78  8 2
+    </SUBDATA>
+"ViolationContingency" "YES"     13 "NO " "Tahoma" ""        8       0 "LimViolPct" "High To Low" "" 100.000 -1 "NO "
+    <SUBDATA ColumnInfo>
+        "CTGLabel"                 602  8 1
+        "LimViolCat"                61  8 2
+        "LimViolValue"              38  8 2
+        "LimViolLimit"              38  8 2
+        "LimViolPct"                41  8 2
+        "LimViolLimit:1"            53  8 2
+    </SUBDATA>
+"ViolationContingencyAll" "YES"     13 "NO " "Segoe UI" ""        8       0 "" "High To Low" "" 100.000 -1 "NO "
+    <SUBDATA ColumnInfo>
+        "CTGLabel"                 362  8 1
+        "LimViolID"                405  8 1
+        "LimViolCat"               119  8 2
+        "LimViolValue"              43  8 2
+        "LimViolLimit"              43  8 2
+        "LimViolPct"                42  8 2
+        "LimViolPct:1"              85  8 1
+        "Selected"                  72  8 1
+    </SUBDATA>
+}
+DATA (Filter, [ObjectType,FilterName,FilterLogic,Number,FilterPre,Enabled,DataMaintainerAssign],,YES)
+{
+"Contingency" "Selected" "AND" 1 "NO " "YES" ""
+    <SUBDATA Condition>
+        Selected = "YES"
+    </SUBDATA>
+}
+
+DATA (Filter, [ObjectType,FilterName,FilterLogic,Number,FilterPre,Enabled,DataMaintainerAssign],,YES)
+{
+"Contingency" "LongTerm" "AND" 0 "NO " "YES" ""
+    <SUBDATA Condition>
+        CTGLabel contains " + "
+        CTGLabel contains "LT_"
+    </SUBDATA>
+"Contingency" "N-1" "OR" 0 "NO " "YES" ""
+    <SUBDATA Condition>
+        _UseAnotherFilter meets "P1"
+        _UseAnotherFilter meets "P2"
+        _UseAnotherFilter meets "P4/P5"
+        _UseAnotherFilter meets "P7"
+    </SUBDATA>
+"Contingency" "N-1_CPLE" "AND" 1 "NO " "YES" ""
+    <SUBDATA Condition>
+        _UseAnotherFilter meets "<Branch>CPLE"
+        _UseAnotherFilter meets "N-1"
+    </SUBDATA>
+"Contingency" "N-1_DUK" "AND" 1 "NO " "YES" ""
+    <SUBDATA Condition>
+        _UseAnotherFilter meets "<Branch>DUK"
+        _UseAnotherFilter meets "N-1"
+    </SUBDATA>
+"Contingency" "N-1_SC" "AND" 1 "NO " "YES" ""
+    <SUBDATA Condition>
+        _UseAnotherFilter meets "<Branch>SC"
+        _UseAnotherFilter meets "N-1"
+    </SUBDATA>
+"Contingency" "N-1_SOCO" "AND" 1 "NO " "YES" ""
+    <SUBDATA Condition>
+        _UseAnotherFilter meets "<Branch>SOCO"
+        _UseAnotherFilter meets "N-1"
+    </SUBDATA>
+"Contingency" "No_Violations" "AND" 0 "NO " "YES" ""
+    <SUBDATA Condition>
+        CTGViol = 0
+    </SUBDATA>
+"Contingency" "NOT_Solved" "AND" 0 "NO " "YES" ""
+    <SUBDATA Condition>
+        CTGSolved startswith "NO"
+    </SUBDATA>
+"Contingency" "NotSkipped_NotSolved" "AND" 0 "NO " "YES" ""
+    <SUBDATA Condition>
+        CTGSolved startswith "NO"
+        CTGSkip = "NO"
+    </SUBDATA>
+"Contingency" "P1" "AND" 0 "NO " "YES" ""
+    <SUBDATA Condition>
+        CTGLabel contains "P1_"
+        CTGLabel notcontains " + "
+    </SUBDATA>
+"Contingency" "P2" "AND" 0 "NO " "YES" ""
+    <SUBDATA Condition>
+        CTGLabel contains "P2_"
+        CTGLabel notcontains " + "
+    </SUBDATA>
+"Contingency" "P3/P6" "AND" 0 "NO " "YES" ""
+    <SUBDATA Condition>
+        CTGLabel contains " + "
+        CTGLabel notcontains "LT_"
+    </SUBDATA>
+"Contingency" "P4/P5" "AND" 0 "NO " "YES" ""
+    <SUBDATA Condition>
+        CTGLabel contains "P4/P5_"
+        CTGLabel notcontains " + "
+    </SUBDATA>
+"Contingency" "P7" "AND" 0 "NO " "YES" ""
+    <SUBDATA Condition>
+        CTGLabel contains "P7_"
+    </SUBDATA>
+"Contingency" "SKIPPED" "AND" 0 "NO " "YES" ""
+    <SUBDATA Condition>
+        CTGSkip startswith "YES"
+    </SUBDATA>
+"Contingency" "SKIPPED_NoViolations" "AND" 0 "NO " "YES" ""
+    <SUBDATA Condition>
+        CTGSkip startswith "YES"
+        CTGViol = 0
+    </SUBDATA>
+"Contingency" "ViolExist" "AND" 0 "NO " "YES" ""
+    <SUBDATA Condition>
+        CTGViol > 0
+    </SUBDATA>
+}
