@@ -1,0 +1,367 @@
+"""N-1 neighbor study processing through PowerWorld SimAuto."""
+
+from __future__ import annotations
+
+import csv
+import tempfile
+import traceback
+from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
+from uuid import uuid4
+
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+
+
+COMPANIES = (
+    ("CPLE", "CPLE"),
+    ("DUK", "DUKE"),
+    ("SC", "Santee Cooper"),
+    ("SOCO", "Southern Company"),
+)
+RESULTS_DIR = "Neighbor Study Result Files"
+FAILURE_LOG_HEADER = "Neighbor Studies failure log"
+SOURCE_SUFFIX = "_CA_NOT_RUN_N-1.PWB"
+WORKING_SUFFIX = "_ACCA_N-1.PWB"
+EXPORT_FIELDS = ("CTGLabel", "LimViolID", "LimViolLimit", "LimViolValue", "LimViolPct", "LimViolPct:1", "LimViolCat")
+
+
+@dataclass(frozen=True)
+class StudyCase:
+    study: str
+    source: Path | None
+    working: Path
+
+
+def discover_n1_cases(root: Path) -> tuple[list[StudyCase], list[str]]:
+    """Find source or previously saved ACCA case in each study's N-1 folder."""
+    cases: list[StudyCase] = []
+    warnings: list[str] = []
+    for study_dir in sorted(root.iterdir(), key=lambda p: p.name.lower()):
+        if not study_dir.is_dir() or study_dir.name == RESULTS_DIR:
+            continue
+        n1_dir = next((p for p in study_dir.iterdir() if p.is_dir() and p.name.lower() == "n-1"), None)
+        if n1_dir is None:
+            warnings.append(f"{study_dir.name}: no N-1 folder")
+            continue
+        matches = sorted(
+            (p for p in n1_dir.iterdir() if p.is_file() and p.name.upper().endswith(SOURCE_SUFFIX)),
+            key=lambda p: p.name.lower(),
+        )
+        existing = sorted(
+            (p for p in n1_dir.iterdir() if p.is_file() and p.name.upper().endswith(WORKING_SUFFIX)),
+            key=lambda p: p.name.lower(),
+        )
+        if len(matches) > 1:
+            warnings.append(f"{study_dir.name}: found {len(matches)} source N-1 cases; expected one")
+            continue
+        if matches:
+            source = matches[0]
+            working = source.with_name(source.name[:-len(SOURCE_SUFFIX)] + WORKING_SUFFIX)
+        elif len(existing) == 1:
+            source = None
+            working = existing[0]
+        else:
+            warnings.append(f"{study_dir.name}: expected one source or ACCA N-1 case; found {len(existing)} ACCA cases")
+            continue
+        cases.append(StudyCase(study_dir.name, source, working))
+    return cases, warnings
+
+
+def _check(result, action: str) -> None:
+    error = result[0] if isinstance(result, (tuple, list)) else result
+    if error:
+        raise RuntimeError(f"{action}: {error}")
+
+
+def _write_failure_log(study_dir: Path, source: Path | None, working: Path | None, lines: list[str]) -> Path:
+    path = study_dir / "log.txt"
+    content = [
+        FAILURE_LOG_HEADER,
+        f"Time: {datetime.now().astimezone().isoformat(timespec='seconds')}",
+        f"Study folder: {study_dir}",
+        f"Source case: {source or 'Not found'}",
+        f"ACCA case: {working or 'Not found'}",
+        "",
+        *lines,
+    ]
+    path.write_text("\n".join(content).rstrip() + "\n", encoding="utf-8")
+    return path
+
+
+def _clear_own_failure_log(study_dir: Path) -> None:
+    path = study_dir / "log.txt"
+    if path.is_file():
+        with path.open("r", encoding="utf-8", errors="replace") as stream:
+            own_log = stream.readline().strip() == FAILURE_LOG_HEADER
+        if own_log:
+            path.unlink()
+
+
+def write_discovery_failure_logs(root: Path, warnings: list[str], log) -> list[str]:
+    reported = []
+    for warning in warnings:
+        study_name = warning.partition(":")[0]
+        study_dir = root / study_name
+        if study_dir.is_dir():
+            path = _write_failure_log(study_dir, None, None, [warning])
+            log(f"Failure log: {path}")
+            reported.append(f"{warning} (details: {path})")
+        else:
+            reported.append(warning)
+    return reported
+
+
+def _script_path(path: Path) -> str:
+    return str(path).replace("\\", "/").replace('"', '""')
+
+
+def _read_export(path: Path) -> list[dict[str, str]]:
+    if not path.exists():
+        return []
+    with path.open("r", encoding="utf-8-sig", newline="") as stream:
+        reader = csv.reader(stream)
+        first = next(reader, [])
+        if len(first) == 1 and first[0].strip().lower() == "violationctg":
+            headers = next(reader, [])
+        else:
+            headers = first
+        if not headers:
+            return []
+        missing = set(EXPORT_FIELDS) - set(headers)
+        if missing:
+            raise RuntimeError(f"PowerWorld export is missing fields: {', '.join(sorted(missing))}")
+        return [dict(zip(headers, row)) for row in reader if any(value.strip() for value in row)]
+
+
+def _export_company(simauto, study: StudyCase, code: str, name: str, output_dir: Path, temp_dir: Path, log) -> list[dict[str, str]]:
+    filter_name = f"{code}_P1"
+    csv_path = temp_dir / f"{code}.csv"
+    fields = ",".join(EXPORT_FIELDS)
+    _check(simauto.RunScriptCommand(
+        f'SaveData("{_script_path(csv_path)}", CSV, ViolationCTG, [{fields}], [], "{filter_name}");'
+    ), f"Export {filter_name} violations")
+    rows = _read_export(csv_path)
+    labels = sorted({row["CTGLabel"].strip() for row in rows if row["CTGLabel"].strip()})
+    log(f"  {name}: {len(rows)} violation rows, {len(labels)} contingencies")
+
+    # Reset selection for each company, including when the preceding company had no rows.
+    _check(simauto.RunScriptCommand("SetData(Contingency, [Selected], [NO], ALL);"), "Clear contingency selection")
+    con_path = output_dir / f"{study.study}_{name} P1.con"
+    if not labels:
+        if con_path.exists():
+            con_path.unlink()
+            log(f"  Removed previous CON file with no matching P1 violations: {con_path}")
+        return rows
+    for label in labels:
+        _check(simauto.ChangeParametersSingleElement(
+            "Contingency", ["CTGLabel", "Selected"], [label, "YES"]
+        ), f"Select contingency {label}")
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    # Stage alongside the destination so replacing a result also works on network drives.
+    temp_con_path = output_dir / f".{uuid4().hex}.con"
+    # The PTI exporter applies SELECTED to Contingency, unlike the result filter above.
+    try:
+        _check(simauto.RunScriptCommand(
+            f'CTGWriteFilePTI("{_script_path(temp_con_path)}", Number, NO, "SELECTED", NO);'
+        ), f"Write {name} PTI contingency file")
+        if not temp_con_path.exists() or temp_con_path.stat().st_size == 0:
+            raise RuntimeError(f"PowerWorld did not write a nonempty CON file: {temp_con_path}")
+        temp_con_path.replace(con_path)
+    finally:
+        temp_con_path.unlink(missing_ok=True)
+    log(f"  Wrote {con_path}")
+    return rows
+
+
+def _case_is_processed(simauto) -> bool:
+    """A saved working copy is reusable only when every active CTG was processed."""
+    result = simauto.GetParametersMultipleElement(
+        "Contingency", ["CTGLabel", "CTGProc", "CTGSkip"], ""
+    )
+    _check(result, "Check saved contingency processing status")
+    fields = result[1]
+    if not fields or len(fields) < 3 or not fields[0]:
+        return False
+    active = [str(processed).strip().upper() for processed, skipped in zip(fields[1], fields[2])
+              if str(skipped).strip().upper() != "YES"]
+    return bool(active) and all(value == "YES" for value in active)
+
+
+def run_n1_case(study: StudyCase, assets_dir: Path, results_root: Path, log, simauto_factory=None) -> tuple[dict[str, list[dict[str, str]] | None], list[str]]:
+    """Save a working case, apply settings, solve, and export four P1 groups."""
+    if simauto_factory is None:
+        import win32com.client
+        simauto_factory = lambda: win32com.client.Dispatch("pwrworld.SimulatorAuto")
+    settings = assets_dir / "NeighborStudy_N-1ContsSettings.aux"
+    if not settings.is_file():
+        raise FileNotFoundError(settings)
+    simauto = simauto_factory()
+    try:
+        reused = False
+        if study.working.is_file():
+            _check(simauto.OpenCase(str(study.working)), f"Open saved ACCA case {study.working}")
+            reused = _case_is_processed(simauto)
+            if reused:
+                log(f"{study.study}: using previously processed case {study.working}")
+            else:
+                simauto.CloseCase()
+                if study.source is None:
+                    raise RuntimeError("Saved ACCA case has unprocessed contingencies and no source case is available")
+                log(f"{study.study}: saved ACCA case is incomplete; running from source")
+        if not reused:
+            if study.source is None:
+                raise RuntimeError("No source case is available for a new N-1 run")
+            _check(simauto.OpenCase(str(study.source)), f"Open {study.source}")
+            _check(simauto.SaveCase(str(study.working), "PWB", True), "Save ACCA working copy")
+        _check(simauto.ProcessAuxFile(str(settings)), "Apply N-1 settings")
+        _check(simauto.RunScriptCommand("EnterMode(Contingency);"), "Enter contingency mode")
+        if not reused:
+            log(f"{study.study}: solving N-1 contingencies with PowerWorld distributed computing; this may take a while")
+            _check(simauto.RunScriptCommand("CTGSolveAll(YES);"), "Solve all contingencies with distributed computing")
+            _check(simauto.SaveCase(str(study.working), "PWB", True), "Save solved ACCA case")
+            log(f"{study.study}: saved solved case {study.working}")
+        results = {}
+        errors = []
+        with tempfile.TemporaryDirectory(prefix="neighbor_study_") as folder:
+            temp_dir = Path(folder)
+            for code, name in COMPANIES:
+                try:
+                    results[code] = _export_company(
+                        simauto, study, code, name, results_root / name, temp_dir, log
+                    )
+                except Exception as exc:
+                    results[code] = None
+                    error = f"{study.study} / {name}: {exc}"
+                    errors.append(error)
+                    log(f"ERROR: {error}")
+                    log(traceback.format_exc().rstrip())
+                    stale_con = results_root / name / f"{study.study}_{name} P1.con"
+                    if stale_con.exists():
+                        stale_con.unlink()
+                        log(f"  Removed previous CON file after failed export: {stale_con}")
+        _check(simauto.RunScriptCommand("SetData(Contingency, [Selected], [NO], ALL);"), "Clear contingency selection")
+        return results, errors
+    finally:
+        try:
+            simauto.CloseCase()
+        except Exception:
+            pass
+
+
+def _sheet_name(name: str, used: set[str]) -> str:
+    cleaned = "".join("_" if ch in '[]:*?/\\' else ch for ch in name).strip() or "Study"
+    base = cleaned[:31]
+    candidate = base
+    number = 2
+    while candidate.lower() in used:
+        suffix = f" ({number})"
+        candidate = base[:31-len(suffix)] + suffix
+        number += 1
+    used.add(candidate.lower())
+    return candidate
+
+
+def write_company_workbooks(results_root: Path, studies: dict[str, dict[str, list[dict[str, str]] | None]], log) -> list[Path]:
+    """One company workbook with one formatted sheet per completed study."""
+    written = []
+    navy = PatternFill("solid", fgColor="305496")
+    white_bold = Font(color="FFFFFF", bold=True)
+    thin = Side(style="thin", color="B7C9DF")
+    headers = ("Contingency Events", "Resulting Issue", "Limit", "Contingency Value", "Percent Loading", "Percent Change", "Category")
+    fields = EXPORT_FIELDS
+    for code, name in COMPANIES:
+        company_dir = results_root / name
+        company_dir.mkdir(parents=True, exist_ok=True)
+        book = Workbook()
+        book.remove(book.active)
+        used: set[str] = set()
+        for study_name, company_rows in studies.items():
+            ws = book.create_sheet(_sheet_name(study_name, used))
+            ws.sheet_view.showGridLines = False
+            ws.merge_cells("B2:H2")
+            title = ws["B2"]
+            title.value = f"{study_name} | {name} P1"
+            title.fill = navy
+            title.font = Font(color="FFFFFF", bold=True, size=12)
+            title.alignment = Alignment(horizontal="center")
+            for col, header in enumerate(headers, 2):
+                cell = ws.cell(3, col, header)
+                cell.fill = navy
+                cell.font = white_bold
+                cell.alignment = Alignment(horizontal="center", wrap_text=True)
+                cell.border = Border(left=thin, right=thin, top=thin, bottom=thin)
+            rows = company_rows.get(code)
+            for row_number, item in enumerate(rows or [], 4):
+                for col, field in enumerate(fields, 2):
+                    raw = item.get(field, "")
+                    if field in ("LimViolLimit", "LimViolValue", "LimViolPct", "LimViolPct:1"):
+                        try:
+                            value = float(str(raw).replace("%", ""))
+                        except (ValueError, TypeError):
+                            value = raw
+                    else:
+                        value = raw
+                    cell = ws.cell(row_number, col, value)
+                    cell.border = Border(left=thin, right=thin, top=thin, bottom=thin)
+                    cell.alignment = Alignment(vertical="center", wrap_text=True)
+                    if isinstance(value, float):
+                        cell.number_format = "0.0"
+            if rows is None:
+                ws["B4"] = "Study or P1 export failed; see Neighbor Studies log"
+            elif not rows:
+                ws["B4"] = "No matching P1 violations"
+            for column, width in {"B": 52, "C": 52, "D": 15, "E": 21, "F": 20, "G": 20, "H": 19}.items():
+                ws.column_dimensions[column].width = width
+            ws.freeze_panes = "D4"
+            if rows:
+                ws.auto_filter.ref = f"B3:H{len(rows) + 3}"
+        if not book.sheetnames:
+            continue
+        path = company_dir / f"{name} P1 Results.xlsx"
+        book.save(path)
+        written.append(path)
+        log(f"Wrote workbook: {path}")
+    return written
+
+
+def run_neighbor_studies(root: Path, assets_dir: Path, log, simauto_factory=None) -> tuple[list[Path], list[str]]:
+    cases, warnings = discover_n1_cases(root)
+    warnings = write_discovery_failure_logs(root, warnings, log)
+    if not cases:
+        raise ValueError("No N-1 source cases were found in the study folders.")
+    results_root = root / RESULTS_DIR
+    completed: dict[str, dict[str, list[dict[str, str]] | None]] = {}
+    for case in cases:
+        study_lines: list[str] = []
+
+        def study_log(message: str) -> None:
+            study_lines.append(str(message))
+            log(message)
+
+        try:
+            study_log(f"Starting study: {case.study}")
+            completed[case.study], company_errors = run_n1_case(case, assets_dir, results_root, study_log, simauto_factory)
+            if company_errors:
+                path = _write_failure_log(case.working.parent.parent, case.source, case.working, study_lines)
+                log(f"Failure log: {path}")
+                warnings.extend(f"{error} (details: {path})" for error in company_errors)
+            else:
+                _clear_own_failure_log(case.working.parent.parent)
+        except Exception as exc:
+            warning = f"{case.study}: {exc}"
+            study_log(f"ERROR: {warning}")
+            study_lines.append(traceback.format_exc().rstrip())
+            path = _write_failure_log(case.working.parent.parent, case.source, case.working, study_lines)
+            log(f"Failure log: {path}")
+            warnings.append(f"{warning} (details: {path})")
+            completed[case.study] = {code: None for code, _name in COMPANIES}
+            for _code, name in COMPANIES:
+                stale_con = results_root / name / f"{case.study}_{name} P1.con"
+                if stale_con.exists():
+                    stale_con.unlink()
+                    log(f"  Removed previous CON file after failed study: {stale_con}")
+    workbooks = write_company_workbooks(results_root, completed, log)
+    return workbooks, warnings
