@@ -320,7 +320,7 @@ class HelpTab(ttk.Frame):
                 ("code", "<Main Folder>\\<Study Name>\\N-1\\*_CA_NOT_RUN_N-1.PWB"),
                 ("h2", "What Run N-1 P1 studies does"),
                 ("num", "1) Saves an *_ACCA_N-1.PWB working copy in each N-1 folder."),
-                ("num", "2) Applies the bundled N-1 settings and solves all contingencies."),
+                ("num", "2) Applies the bundled N-1 settings and solves all contingencies using PowerWorld distributed computing."),
                 ("num", "3) Uses the CPLE_P1, DUK_P1, SC_P1, and SOCO_P1 filters."),
                 ("num", "4) Saves selected PTI CON files and company workbooks under Neighbor Study Result Files."),
                 ("p", "Each company workbook has one sheet per completed study. Each CON file contains the contingencies behind that company's filtered P1 violations."),
