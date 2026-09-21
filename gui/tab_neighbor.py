@@ -8,7 +8,7 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
-from core.neighbor_studies import RESULTS_DIR, discover_n1_cases, run_neighbor_studies
+from core.neighbor_studies import RESULTS_DIR, discover_n1_cases, run_neighbor_studies, write_discovery_failure_logs
 
 
 class NeighborStudiesTab(ttk.Frame):
@@ -28,8 +28,8 @@ class NeighborStudiesTab(ttk.Frame):
         self.run_button.grid(row=2, column=0, sticky="w")
         ttk.Label(
             controls,
-            text=("For each study, uses N-1/*_CA_NOT_RUN_N-1.PWB. "
-                  "Creates an *_ACCA_N-1.PWB working case, four company CON files, "
+            text=("For each study, uses a completed N-1/*_ACCA_N-1.PWB when available; "
+                  "otherwise runs *_CA_NOT_RUN_N-1.PWB. Creates company CON files "
                   "and one workbook per company with a sheet for each study."),
             wraplength=800,
         ).grid(row=3, column=0, columnspan=2, sticky="w", pady=(10, 0))
@@ -66,7 +66,7 @@ class NeighborStudiesTab(ttk.Frame):
         self.tree.delete(*self.tree.get_children())
         cases, warnings = discover_n1_cases(Path(selected))
         for case in cases:
-            self.tree.insert("", "end", values=(case.study, str(case.source), str(case.working)))
+            self.tree.insert("", "end", values=(case.study, str(case.source) if case.source else "Saved case only", str(case.working)))
         self._log(f"Found {len(cases)} N-1 study cases in {selected}")
         for warning in warnings:
             self._log(f"Skipped: {warning}")
@@ -78,9 +78,10 @@ class NeighborStudiesTab(ttk.Frame):
         if not root.is_dir():
             messagebox.showwarning("No folder", "Select a valid main folder first.")
             return
-        cases, _warnings = discover_n1_cases(root)
+        cases, discovery_warnings = discover_n1_cases(root)
         if not cases:
-            messagebox.showwarning("No cases", "No N-1 source cases were found in study folders.")
+            write_discovery_failure_logs(root, discovery_warnings, self._log)
+            messagebox.showwarning("No cases", "No N-1 source or ACCA cases were found. See log.txt in each affected study folder.")
             return
         if any(case.working.exists() for case in cases) or (root / RESULTS_DIR).exists():
             if not messagebox.askyesno(
@@ -122,11 +123,13 @@ class NeighborStudiesTab(ttk.Frame):
                     self._finish()
                     for warning in warnings:
                         self._log(f"WARNING: {warning}")
-                    messagebox.showinfo(
-                        "Neighbor Studies complete",
+                    show_result = messagebox.showwarning if warnings else messagebox.showinfo
+                    show_result(
+                        "Neighbor Studies complete with warnings" if warnings else "Neighbor Studies complete",
                         f"Created {len(workbooks)} company workbooks.\n"
                         f"Warnings: {len(warnings)}\n\n"
-                        f"Results: {Path(self.folder.get()) / RESULTS_DIR}",
+                        + ("Failure details: log.txt in each affected study folder.\n\n" if warnings else "")
+                        + f"Results: {Path(self.folder.get()) / RESULTS_DIR}",
                     )
                 elif kind == "error":
                     self._finish()
