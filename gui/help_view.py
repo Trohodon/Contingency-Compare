@@ -103,6 +103,7 @@ class HelpTab(ttk.Frame):
             "Recommended folder setup",
             "Quick start: Case Processing",
             "Quick start: Compare Cases",
+            "Neighbor Studies: N-1 P1",
             "Straight Comparison (all scenarios)",
             "Batch compare workflow",
             "How the +/- grouping works",
@@ -310,6 +311,20 @@ class HelpTab(ttk.Frame):
                 ("bullet", "Clear all: wipe queue and start fresh"),
                 ("bullet", "Build queued workbook: exports a new .xlsx with one sheet per pair"),
                 ("callout", "Delta column shows numeric change or 'Only in left/right' when missing on one side."),
+            ],
+
+            "Neighbor Studies: N-1 P1": [
+                ("h1", "Neighbor Studies: N-1 P1"),
+                ("p", "Use the third tab to process each study in a main Neighbor Studies folder."),
+                ("h2", "Expected input"),
+                ("code", "<Main Folder>\\<Study Name>\\N-1\\*_CA_NOT_RUN_N-1.PWB"),
+                ("h2", "What Run N-1 P1 studies does"),
+                ("num", "1) Saves an *_ACCA_N-1.PWB working copy in each N-1 folder."),
+                ("num", "2) Applies the bundled N-1 settings and solves all contingencies."),
+                ("num", "3) Uses the CPLE_P1, DUK_P1, SC_P1, and SOCO_P1 filters."),
+                ("num", "4) Saves selected PTI CON files and company workbooks under Neighbor Study Result Files."),
+                ("p", "Each company workbook has one sheet per completed study. Each CON file contains the contingencies behind that company's filtered P1 violations."),
+                ("callout", "A rerun replaces generated files with the same names after confirmation."),
             ],
 
             "Straight Comparison (all scenarios)": [
