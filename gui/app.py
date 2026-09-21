@@ -4,6 +4,7 @@ from tkinter import ttk
 
 from gui.tab_case import CaseProcessingTab
 from gui.tab_compare import CompareTab
+from gui.tab_neighbor import NeighborStudiesTab
 from gui.help_view import HelpTab  # NEW
 
 
@@ -126,7 +127,11 @@ class App(ttk.Frame):
         self.tab_compare = ttk.Frame(self.notebook, padding=(8, 8))
         self.notebook.add(self.tab_compare, text="Compare Cases")
 
-        # --- Tab 3: Help ---
+        # --- Tab 3: Neighbor Studies ---
+        self.tab_neighbor = ttk.Frame(self.notebook, padding=(8, 8))
+        self.notebook.add(self.tab_neighbor, text="Neighbor Studies")
+
+        # --- Tab 4: Help ---
         self.tab_help = ttk.Frame(self.notebook, padding=(8, 8))
         self.notebook.add(self.tab_help, text="Help")
 
@@ -136,6 +141,9 @@ class App(ttk.Frame):
 
         self.compare_view = CompareTab(self.tab_compare)
         self.compare_view.pack(fill=tk.BOTH, expand=True)
+
+        self.neighbor_view = NeighborStudiesTab(self.tab_neighbor)
+        self.neighbor_view.pack(fill=tk.BOTH, expand=True)
 
         self.help_view = HelpTab(self.tab_help)  # NEW
         self.help_view.pack(fill=tk.BOTH, expand=True)
@@ -175,7 +183,7 @@ class App(ttk.Frame):
         - If tabs want status updates, they can call self.master_app.set_status(...)
         """
         # Give tabs a reference to the app if they want to call set_status()
-        for view in (self.case_processing_view, self.compare_view, self.help_view):
+        for view in (self.case_processing_view, self.compare_view, self.neighbor_view, self.help_view):
             try:
                 view.master_app = self
             except Exception:
