@@ -1,4 +1,4 @@
-"""Neighbor Studies tab for N-1 P1 case processing."""
+"""Neighbor Studies tab for N-1 P1 and P2-7 case processing."""
 
 from __future__ import annotations
 
@@ -24,13 +24,13 @@ class NeighborStudiesTab(ttk.Frame):
         ttk.Label(controls, textvariable=self.folder, wraplength=700).grid(row=1, column=0, sticky="w", pady=(4, 8))
         self.browse_button = ttk.Button(controls, text="Browse main folder…", command=self._browse)
         self.browse_button.grid(row=1, column=1, padx=8)
-        self.run_button = ttk.Button(controls, text="Run N-1 P1 studies", command=self._run)
+        self.run_button = ttk.Button(controls, text="Run N-1 neighbor studies", command=self._run)
         self.run_button.grid(row=2, column=0, sticky="w")
         ttk.Label(
             controls,
             text=("For each study, uses a completed N-1/*_ACCA_N-1.PWB when available; "
                   "otherwise runs *_CA_NOT_RUN_N-1.PWB. Creates company CON files "
-                  "and one workbook per company with a sheet for each study."),
+                  "and one workbook per company with P1 and P2-7 sheets for each study."),
             wraplength=800,
         ).grid(row=3, column=0, columnspan=2, sticky="w", pady=(10, 0))
         controls.columnconfigure(0, weight=1)
