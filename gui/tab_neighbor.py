@@ -8,7 +8,7 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
-from core.neighbor_studies import RESULTS_DIR, discover_n1_cases, run_neighbor_studies, write_discovery_failure_logs
+from core.neighbor_studies import RESULTS_DIR, discover_neighbor_cases, run_neighbor_studies, write_discovery_failure_logs
 
 
 class NeighborStudiesTab(ttk.Frame):
@@ -24,21 +24,21 @@ class NeighborStudiesTab(ttk.Frame):
         ttk.Label(controls, textvariable=self.folder, wraplength=700).grid(row=1, column=0, sticky="w", pady=(4, 8))
         self.browse_button = ttk.Button(controls, text="Browse main folder…", command=self._browse)
         self.browse_button.grid(row=1, column=1, padx=8)
-        self.run_button = ttk.Button(controls, text="Run N-1 neighbor studies", command=self._run)
+        self.run_button = ttk.Button(controls, text="Run Neighbor Studies", command=self._run)
         self.run_button.grid(row=2, column=0, sticky="w")
         ttk.Label(
             controls,
-            text=("For each study, uses a completed N-1/*_ACCA_N-1.PWB when available; "
-                  "otherwise runs *_CA_NOT_RUN_N-1.PWB. Creates company CON files "
-                  "and one workbook per company with P1 and P2-7 sheets for each study."),
+            text=("Processes N-1 ACCA and N-1-1 DCCA cases, reusing completed working cases. "
+                  "N-1 creates company CON files and one workbook per company with P1 and "
+                  "P2-7 sheets. N-1-1 result exports will be added in the next stage."),
             wraplength=800,
         ).grid(row=3, column=0, columnspan=2, sticky="w", pady=(10, 0))
         controls.columnconfigure(0, weight=1)
 
         preview = ttk.LabelFrame(self, text="Cases found", padding=8)
         preview.pack(fill="both", expand=True, padx=10, pady=(0, 8))
-        self.tree = ttk.Treeview(preview, columns=("study", "source", "working"), show="headings", height=8)
-        for column, label, width in (("study", "Study", 220), ("source", "Source PWB", 450), ("working", "Working PWB", 450)):
+        self.tree = ttk.Treeview(preview, columns=("study", "type", "source", "working"), show="headings", height=8)
+        for column, label, width in (("study", "Study", 200), ("type", "Case Type", 75), ("source", "Source PWB", 420), ("working", "Working PWB", 420)):
             self.tree.heading(column, text=label)
             self.tree.column(column, width=width, anchor="w")
         self.tree.pack(fill="both", expand=True)
@@ -64,10 +64,10 @@ class NeighborStudiesTab(ttk.Frame):
             return
         self.folder.set(selected)
         self.tree.delete(*self.tree.get_children())
-        cases, warnings = discover_n1_cases(Path(selected))
+        cases, warnings = discover_neighbor_cases(Path(selected))
         for case in cases:
-            self.tree.insert("", "end", values=(case.study, str(case.source) if case.source else "Saved case only", str(case.working)))
-        self._log(f"Found {len(cases)} N-1 study cases in {selected}")
+            self.tree.insert("", "end", values=(case.study, case.case_type, str(case.source) if case.source else "Saved case only", str(case.working)))
+        self._log(f"Found {len(cases)} Neighbor Studies cases in {selected}")
         for warning in warnings:
             self._log(f"Skipped: {warning}")
 
@@ -78,10 +78,10 @@ class NeighborStudiesTab(ttk.Frame):
         if not root.is_dir():
             messagebox.showwarning("No folder", "Select a valid main folder first.")
             return
-        cases, discovery_warnings = discover_n1_cases(root)
+        cases, discovery_warnings = discover_neighbor_cases(root)
         if not cases:
             write_discovery_failure_logs(root, discovery_warnings, self._log)
-            messagebox.showwarning("No cases", "No N-1 source or ACCA cases were found. See log.txt in each affected study folder.")
+            messagebox.showwarning("No cases", "No N-1 or N-1-1 source or processed cases were found. See log.txt in each affected study folder.")
             return
         if any(case.working.exists() for case in cases) or (root / RESULTS_DIR).exists():
             if not messagebox.askyesno(
@@ -93,7 +93,7 @@ class NeighborStudiesTab(ttk.Frame):
         self._running = True
         self.browse_button.configure(state="disabled")
         self.run_button.configure(state="disabled")
-        self._log(f"Starting {len(cases)} N-1 studies...")
+        self._log(f"Starting {len(cases)} Neighbor Studies cases...")
         assets_dir = Path(__file__).resolve().parent.parent / "assets"
         threading.Thread(target=self._worker, args=(root, assets_dir), daemon=True).start()
 
