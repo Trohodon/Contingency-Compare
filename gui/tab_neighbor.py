@@ -29,8 +29,8 @@ class NeighborStudiesTab(ttk.Frame):
         ttk.Label(
             controls,
             text=("Processes N-1 ACCA and N-1-1 DCCA cases, reusing completed working cases. "
-                  "N-1 creates company CON files and one workbook per company with P1 and "
-                  "P2-7 sheets. N-1-1 result exports will be added in the next stage."),
+                  "N-1 creates company P1 and P2-7 results. N-1-1 appends each company's "
+                  "P3/P6 results to the matching P2-7 CON file and workbook sheet."),
             wraplength=800,
         ).grid(row=3, column=0, columnspan=2, sticky="w", pady=(10, 0))
         controls.columnconfigure(0, weight=1)
