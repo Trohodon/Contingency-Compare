@@ -324,6 +324,7 @@ class HelpTab(ttk.Frame):
                 ("num", "3) Uses each company's P1 and P2,4,5,7 filters."),
                 ("num", "4) Saves selected PTI CON files and company workbooks under Neighbor Study Result Files."),
                 ("num", "5) Creates and solves *_DCCA_N-1-1_LongTerm.PWB from the matching N-1-1 source using the bundled N-1-1 settings and distributed computing."),
+                ("num", "6) Uses each company's P3/P6 filter and appends those contingencies and violation rows to that study's existing P2-7 CON file and workbook sheet."),
                 ("p", "Each company workbook has P1 and P2-7 sheets for every study, including Percent Change. Empty sheets say when no violations matched. Each CON file contains the contingencies behind that company's matching violations."),
                 ("p", "When a study or company export fails, the study folder gets a log.txt with the case paths and error details. The app shows the log path when the run completes."),
                 ("callout", "A rerun replaces generated files with the same names after confirmation."),
