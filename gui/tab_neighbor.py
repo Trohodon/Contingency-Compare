@@ -30,7 +30,8 @@ class NeighborStudiesTab(ttk.Frame):
             controls,
             text=("Processes N-1 ACCA and N-1-1 DCCA cases, reusing completed working cases. "
                   "N-1 creates company P1 and P2-7 results. N-1-1 appends each company's "
-                  "P3/P6 results to the matching P2-7 CON file and workbook sheet."),
+                  "P3/P6 results to the matching P2-7 outputs. Results must have at least "
+                  "5% change and 80% loading, or at least 20% change."),
             wraplength=800,
         ).grid(row=3, column=0, columnspan=2, sticky="w", pady=(10, 0))
         controls.columnconfigure(0, weight=1)
