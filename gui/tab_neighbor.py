@@ -16,6 +16,7 @@ class NeighborStudiesTab(ttk.Frame):
         super().__init__(master)
         self.folder = tk.StringVar(value="No main folder selected")
         self.include_blacklisted = tk.BooleanVar(value=False)
+        self.limit_top_five = tk.BooleanVar(value=True)
         self._events: queue.Queue[tuple[str, object]] = queue.Queue()
         self._running = False
 
@@ -31,17 +32,24 @@ class NeighborStudiesTab(ttk.Frame):
             variable=self.include_blacklisted,
         )
         self.include_blacklisted_check.grid(row=2, column=0, columnspan=2, sticky="w", pady=(0, 8))
+        self.limit_top_five_check = ttk.Checkbutton(
+            controls,
+            text="Limit each Resulting Issue to its 5 worst contingencies",
+            variable=self.limit_top_five,
+        )
+        self.limit_top_five_check.grid(row=3, column=0, columnspan=2, sticky="w", pady=(0, 8))
         self.run_button = ttk.Button(controls, text="Run Neighbor Studies", command=self._run)
-        self.run_button.grid(row=3, column=0, sticky="w")
+        self.run_button.grid(row=4, column=0, sticky="w")
         ttk.Label(
             controls,
             text=("Processes N-1 ACCA and N-1-1 DCCA cases, reusing completed working cases. "
                   "N-1 creates company P1 and P2-7 results. N-1-1 appends each company's "
                   "P3/P6 results to the matching P2-7 outputs. Results must have at least "
                   "5% change and 80% loading, or at least 20% change. Blacklisted items are "
-                  "excluded unless the checkbox is selected."),
+                  "excluded unless the checkbox is selected. By default, each Resulting Issue "
+                  "is limited to its 5 worst contingencies."),
             wraplength=800,
-        ).grid(row=4, column=0, columnspan=2, sticky="w", pady=(10, 0))
+        ).grid(row=5, column=0, columnspan=2, sticky="w", pady=(10, 0))
         controls.columnconfigure(0, weight=1)
 
         preview = ttk.LabelFrame(self, text="Cases found", padding=8)
@@ -103,15 +111,16 @@ class NeighborStudiesTab(ttk.Frame):
         self.browse_button.configure(state="disabled")
         self.run_button.configure(state="disabled")
         self.include_blacklisted_check.configure(state="disabled")
+        self.limit_top_five_check.configure(state="disabled")
         self._log(f"Starting {len(cases)} Neighbor Studies cases...")
         assets_dir = Path(__file__).resolve().parent.parent / "assets"
         threading.Thread(
             target=self._worker,
-            args=(root, assets_dir, self.include_blacklisted.get()),
+            args=(root, assets_dir, self.include_blacklisted.get(), self.limit_top_five.get()),
             daemon=True,
         ).start()
 
-    def _worker(self, root: Path, assets_dir: Path, include_blacklisted: bool) -> None:
+    def _worker(self, root: Path, assets_dir: Path, include_blacklisted: bool, limit_top_five: bool) -> None:
         # A worker thread needs its own COM initialization for PowerWorld SimAuto.
         try:
             import pythoncom
@@ -122,6 +131,7 @@ class NeighborStudiesTab(ttk.Frame):
                     assets_dir,
                     lambda message: self._events.put(("log", message)),
                     include_blacklisted=include_blacklisted,
+                    limit_top_five=limit_top_five,
                 )
                 self._events.put(("done", result))
             finally:
@@ -161,3 +171,4 @@ class NeighborStudiesTab(ttk.Frame):
         self.browse_button.configure(state="normal")
         self.run_button.configure(state="normal")
         self.include_blacklisted_check.configure(state="normal")
+        self.limit_top_five_check.configure(state="normal")
