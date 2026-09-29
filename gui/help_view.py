@@ -327,6 +327,7 @@ class HelpTab(ttk.Frame):
                 ("num", "6) Uses each company's P3/P6 filter and appends those contingencies and violation rows to that study's existing P2-7 CON file and workbook sheet."),
                 ("num", "7) Keeps rows where Percent Change is at least 5% and Percent Loading is at least 80%, plus every row where Percent Change is at least 20%. The same retained rows determine the CON contingencies and Excel contents."),
                 ("num", "8) Excludes + Cross230kV and _A-R contingency names and the configured Catawba 1A/1B Resulting Issues. Select Include blacklisted contingencies and resulting issues to keep them."),
+                ("num", "9) By default, keeps the five worst unique contingencies for each Resulting Issue, ranked by Percent Loading and then Percent Change. Clear the top-five checkbox to keep every matching contingency. The same final set is used for Excel and CON files."),
                 ("p", "Each company workbook has P1 and P2-7 sheets for every study, including Percent Change. Empty sheets say when no violations matched. Each CON file contains the contingencies behind that company's matching violations."),
                 ("p", "When a study or company export fails, the study folder gets a log.txt with the case paths and error details. The app shows the log path when the run completes."),
                 ("callout", "A rerun replaces generated files with the same names after confirmation."),
