@@ -1,86 +1,144 @@
-//--------------------------------------------------------------------------------
+DATA (CTG_OPTIONS, [CTG_WhatToDoWithBC, CTG_BCFlows, CTG_BCLowVolt, CTG_BCHighVolt],,YES)
+{
+//CTG_WhatToDoWithBC  BCViolReport  String  'Specify what to do with base case violations. 0 = do not report; 1 = report all; 2 = use change from base case criteria'
+//CTG_BCFlows  BCViolBranchInc  Real  'A base case branch violation will not be re-reported unless the flow increase is above this threshold.'
+//CTG_BCLowVolt  BCViolLowVoltDec  Real  'A base case low voltage violation will not be re-reported unless the voltage decrease is above this threshold.'
+//CTG_BCHighVolt  BCViolHighVoltInc  Real  'A base case high voltage violation will not be re-reported unless the voltage increase is above this threshold.'
+  1 0.5 0.005 0.005
+}
+
+//--------------------------------------------------------------------------
 // THE FOLLOWING SECTION CONTAINS OPTIONS FOR THE CONTINGENCY ANALYSIS.
-//--------------------------------------------------------------------------------
-DATA (CTG_OPTIONS, [ActionStatus,ConvergenceTol,AllowAmpLimits,CTG_AlwaysSaveResults,CTG_BCFlows,
-    CTG_BCFlows:2,CTG_BCFlows:1,CTG_BCHighVolt,CTG_BCHighVolt:2,CTG_BCHighVolt:1,
-    CTG_BCInterface,CTG_BCInterface:2,CTG_BCInterface:1,CTG_BCLowVolt,
-    CTG_BCLowVolt:2,CTG_BCLowVolt:1,CTG_CalculationMethod,CTGFullSave,
-    CTGFullSaveTypes,CtgFileName:1,CTG_ReportMaxVioPerType,
-    CTGTPMonitorOnlySuperBus,ReactivePowerModel,CTG_ReportAll,
+//--------------------------------------------------------------------------
+DATA (CTG_Options_Value, [VariableName,ValueField],AUXDEF,YES)
+{
+"AGCToleranceMVA"              "5"
+"AlwaysReport"                 "YES"
+"AlwaysBranchInc"              "999"
+"AlwaysHighVoltInc"            "0.1"
+"AlwaysInterfaceInc"           "999"
+"AlwaysLowVoltDec"             "0.1"
+"NeverReport"                  "NO"
+"NeverBranchInc"               "0"
+"NeverHighVoltInc"             "0"
+"NeverInterfaceInc"            "0"
+"NeverLowVoltDec"              "0"
+"VoltChangePercent"            "NO"
+"MonDiscBus"                   "NO"
+"DisableGenDropOverlap"        "NO"
+"AGCTolerance"                 "0.05"
+"MakeUpPower"                  "Gen Part Factors"
+"TSModelMaxDelay"              "3600"
+"TSModelsTrip"                 ""
+"TSModelsMonitor"              ""
+"DynAssignSlack:0"             "NO"
+"MVACOnvergenceTol"            "Default"
+"PUConvergenceTol"             "Default"
+"DisableOptMult:0"             "Default"
+"MaxItr:0"                     "Default"
+"MinVoltILoad:0"               "Default"
+"MinVoltSLoad:0"               "Default"
+"EnforceGenMWLimits:0"         "Default"
+"LTCTapBalance:0"              "Default"
+"ChkPhaseShifters:0"           "Default"
+"ChkSVCs"                      "Default"
+"ChkShunts:0"                  "Default"
+"ChkTaps:0"                    "Default"
+"DisableGenMVRCheck:0"         "Default"
+"ChkVarBackOffImmediately"     "Default"
+"ChkVarImmediately:0"          "Default"
+"MaxItrVoltLoop"               "Default"
+"MinLTCSense:0"                "Default"
+"ModelPSDDiscrete:0"           "Default"
+"PreventOscillations:0"        "Default"
+"ShuntInner:0"                 "Default"
+}
+
+DATA (CTG_Options, [CTGTPMonitorOnlySuperBus,CTG_BCVoltSensThreshold,CTG_BCVoltSensMonitorFilter,
+    CTG_BCVoltSensReporting,CTG_AlwaysSaveResults,
+    WhatActuallyOccurredContingencyDescription,CTGSaveInPWB,CTGStoreLODFS,
+    CTG_CalculationMethod,CTGSolutionOptions,OC_SolutionType,
+    IterateOnActionStatus,AllowAmpLimits,ReactivePowerModel,CtgFileName:1,
+    RetryRobustSolutionProcess,RTCIGAnaMode,CTG_ReportMaxVioPerType,CTG_ReportAll,
     CTG_ReportBaseCaseOutages,CTG_ReportBranchChangeFlowVio,CTG_ReportBusHighVolt,
-    CTG_ReportBusLowVolt,CTG_ReportBusVoltageExtremes,CTG_ReportCaseSummary,
-    CTG_ReportCondense,CTG_ReportCreateTables,CTG_BCDiscBusReporting,
-    CTG_ReportFieldSeparator,CTG_ReportIDBusBy,CTG_ReportInactiveViolations,
+    CTG_ReportBusLowVolt,CTG_ReportBusVoltages,CTG_ReportCaseSummary,
+    CTG_ReportCondense,CTG_ReportCreateTables,CTG_ReportFieldSeparator,
+    CTG_ReportIDBusBy,CTG_ReportInactiveViolations,
     CTG_ReportInterfaceChangeFlowVio,CTG_ReportInterfaceFlow,
     CTG_ReportLargestBranchFlow,CTG_ReportLargestInterfaceFlow,CTG_ReportLineFlow,
     CTG_ReportMonitoredAreas,CTG_ReportMonitoredZones,CTG_ReportOnlyNonZero,
     CTG_ReportOnlyViolations,CTG_ReportOptionSettings,CTG_ReportVoltDecreaseVio,
-    CTG_ReportVoltIncreaseVio,CTG_BCVoltSensReporting,RetryRobustSolutionProcess,
-    RTCTGAnaMode,CTGSaveInPWB,CTGStoreLODFS,CTG_WhatToDoWithBC:3,
-    UseAreaPartsMakeUpPower,CTG_BCVoltSensMonitorFilter,CTG_BCVoltSensThreshold,
-    CTG_WhatToDoWithBC,CTG_WhatToDoWithBC:2,CTG_WhatToDoWithBC:1])
+    CTG_ReportVoltIncreaseVio],AUXDEF,YES)
 {
-"CHECK"  0.050 "NO " "NO "  0.000 999.000  0.000  0.000  2.000  0.000  0.000 999.000  0.000  0.000  2.000  0.000 "     0"    0        0 ""       9999 "YES" "     0" "NO " "NO " "NO " "YES" "YES" "NO " "NO " "NO " "NO " "NO " "$"      3 "NO " "NO " "YES" "NO " "NO " "YES" "NO " "NO " "NO " "NO " "NO " "NO " "NO " "NO " "NO " NO  "YES" " 0" "NO " "Area Part Factors" "" 10.000 "     1" "NO " "NO "
+"YES" 10.000 "" "NO" "NO" "PRETTY NAME_NUMBER" "YES" "0" "" 0 "" "NO" "NO" "NO" 0 "" "NO" "NO" 9999 "NO" "NO" "NO" "YES" "YES" "NO" "NO" "NO" "NO" "+" 3 "NO" "NO" "YES" "NO" "NO" "YES" "NO" "NO" "NO" "NO" "NO"
 }
 
-// THE FOLLOWING SECTION CONTAINS THE POWER FLOW SOLUTION OPTIONS.
-DATA (SIM_SOLUTION_OPTIONS, [DCPFAssumeConstV,DCIgnorePhaseShifterCosineTerm,DCIgnoreXFImpedanceCorrection,
-    DCPFModelType,DCPFMode,LossSenseFunc:1,EnforceConvex,IncludePenaltyFactors,
-    ContingentInterfaceEnforcement,DisableAngleRotation,RestoreSolution,
-    RestoreState,AllowMultIslands,LossSenseFunc,SBase,ConvergenceTol,
-    DisableOptMult,DoOneIteration,FlatStart,MaxItr,MinVoltILoad,MinVoltSLoad,
-    PVCEnforceAGC,PVCEnforceGenMWLimits,PVCEnforcePosLoad,InjGrpName,
-    ConvergenceTol:1,UseAreaPartsMakeUpPower,PVCQPowerFactMult,PVCPowerFac,
-    PVCUseConstantPF,BusIdentifier,LogColorLogging,LogColorLogging:1,
-    LogColorLogging:5,LogColorLogging:2,LogColorLogging:3,LogColorLogging:4,
-    IncludeNomVolt,LogDisableLogging,LogDisableLogging:1,LogDisableLogging:5,
-    LogDisableLogging:2,LogDisableLogging:3,LogDisableLogging:4,ChkAreaInt,
-    EnforceGenMWLimits,SEOUseConsolidation,SEOLTCTapBalance,ChkPhaseShifters,
-    ChkShunts,ChkTaps,DisableGenMVRCheck,ChkVars,MaxItr:1,MinLTCSense,
-    ModelPSDiscrete,PreventOscillations,SEORemoteRegVarAlloc,SSContPFInnerLoop,
-    SEOTransformerSteppingMethodology])
+DATA (FILTER, [ObjectType,FilterName,FilterLogic,FilterPre,Enabled],,YES)
 {
-"NO " "YES" "YES" 0 "NO " "NO " "NO " "YES"  1 "NO " "NO " "NO " "YES" "None" "100.000"  0.001 "NO " "NO " "NO "     50  0.500  0.700 "NO " "NO " "NO " ""  0.050 "Use Area/SuperArea ACE"  1.000  1.000 "NO " "Numbers" 16711680 8388736 16711680  32768  8388863 33023 "NO " "NO " "NO " "YES" "NO " "NO " "NO " "YES" "YES" "NO " "YES" "YES" "YES" "YES" "NO " "NO "     20  0.010  "NO " "YES" "RegPerc"  "YES" "Coordinated"
-}
-
-DATA (POSTPOWERFLOWACTIONS, [CTGSkip])
-{
-"NO "
-    <SUBDATA CTGElement>
+"Contingency" "No Violations" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        CTGViol = 0
     </SUBDATA>
-}
 
-// THE FOLLOWING SECTION CONTAINS OPTIONS FOR ALL GENERATION SET TO LIMIT THE MW RESPONSE OF A GENERATOR IN THE POST-CONTINGENCY SOLUTION
-SCRIPT
-{
-SelectAll(Gen); // select all
-SetData(Gen, [CTGMakeUpGen], [-1.0], Selected); // set all generators to have no Maximum response
-UnSelectAll(Gen); // unselect all
-}
+"Contingency" "Started" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        CTGSkip startswith "YES"
+    </SUBDATA>
 
-// THE FOLLOWING SECTION CONTAINS OPTIONS FOR ALL GENERATION SET TO LIMIT THE AGC RESPONSE OF A GENERATOR IN THE POST-CONTINGENCY SOLUTION
-SCRIPT
-{
-SelectAll(Gen); // select all
-SetData(Gen, [GenPostCTGPreventAGC,GenParFac:1], ["NO","same"], Selected); // set all generators to not prevent post-contingency ATC response
-UnSelectAll(Gen); // unselect all
-}
+"Contingency" "Skipped_NoViolations" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        CTGSkip startswith "YES"
+        CTGViol = 0
+    </SUBDATA>
 
-// THE FOLLOWING SECTION CONTAINS OPTIONS FOR ALL LOAD THROW OVER RECORDS IN POST-CONTINGENCY
-SCRIPT
-{
-SelectAll(Bus); // select all
-SetData(Bus, [BusNum:1], [0], Selected); // set all buses to have NO load throw over bus
-UnSelectAll(Bus); // unselect all
-}
+"Contingency" "NOT_Solved" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        CTGSolved startswith "NO"
+    </SUBDATA>
 
-//--------------------------------------------------------------------------------
-// THE FOLLOWING SECTION CONTAINS A DESCRIPTION OF THE CONTINGENCY RECORDS.
-//--------------------------------------------------------------------------------
-DATA (CONTINGENCY, [CTGLabel,CTGSkip,CTGProc,CTGSolved,CtgFileName],,YES)
-{
-"BASECASE" "NO " "NO " "NO " "none"
-    <SUBDATA CTGElement>
-// Do nothing..this is basecase!
+"Contingency" "ViolSol" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        CTGViol > 0
+    </SUBDATA>
+
+"Contingency" "NotSkipped_NotSolved" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        CTGSolved startswith "no"
+        CTGSkip = "no"
+    </SUBDATA>
+
+"Contingency" "P1" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        Name contains "P1_"
+        Name notcontains "+"
+    </SUBDATA>
+
+"Contingency" "P2" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        Name contains "P2_"
+        Name notcontains " + "
+    </SUBDATA>
+
+"Contingency" "P3/P6" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        Name contains " + "
+        Name notcontains "LT_"
+    </SUBDATA>
+
+"Contingency" "P4/P5" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        Name contains "P4/P5_"
+        Name notcontains " + "
+    </SUBDATA>
+
+"Contingency" "P7" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        Name contains "P7_"
+    </SUBDATA>
+
+"Contingency" "LongTerm" "AND" "NO " "YES" ""
+    <SUBDATA Condition>
+        Name contains " + "
+        Name contains "LT_"
     </SUBDATA>
 }
