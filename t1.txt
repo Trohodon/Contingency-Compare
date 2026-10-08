@@ -1,144 +1,144 @@
-DATA (CTG_OPTIONS, [CTG_WhatToDoWithBC, CTG_BCFlows, CTG_BCLowVolt, CTG_BCHighVolt],,YES)
+//Start buses with @ symbol (N-1 Buses)
+//--------------------------------------------------------------------
+// THE FOLLOWING ARE ADVANCED FILTERS USED BY THE CONTINGENCY AUTO INSERT OPTIONS for inserting N-1 Buses
+//--------------------------------------------------------------------
+DATA (FILTER, [ObjectType,Selected,FilterName,FilterLogic,FilterPre,Enabled])
 {
-//CTG_WhatToDoWithBC  BCViolReport  String  'Specify what to do with base case violations. 0 = do not report; 1 = report all; 2 = use change from base case criteria'
-//CTG_BCFlows  BCViolBranchInc  Real  'A base case branch violation will not be re-reported unless the flow increase is above this threshold.
-//CTG_BCLowVolt  BCViolLowVoltDec  Real  'A base case low voltage violation will not be re-reported unless the voltage decrease is above this threshold.
-//CTG_BCHighVolt  BCViolHighVoltInc  Real  'A base case high voltage violation will not be re-reported unless the voltage increase is above this threshold.
-  1 0.5 0.005 0.005
+"Bus" "NO " "SCEG_N-1Buses" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        AreaName = "SCEG"
+        BusName contains "@"
+    </SUBDATA>
 }
 
-//--------------------------------------------------------------------------------
-// THE FOLLOWING SECTION CONTAINS OPTIONS FOR THE CONTINGENCY ANALYSIS.
-//--------------------------------------------------------------------------------
-DATA (CTG_Options_Value, [VariableName,ValueField],AUXDEF,YES)
+//--------------------------------------------------------------------
+//THE FOLLOWING ARE THE CONTINGENCY AUTO INSERT OPTIONS for inserting N-1 Buses. The section above is just a filter that is needed.
+//--------------------------------------------------------------------
+DATA (CTG_AUTOINSERT_OPTIONS, [DOCBranchVoltageTreatment,BusIdentifier,CtgAutoInsCombinationVal1:2,
+    CtgAutoInsCombinationVal1:1,CtgAutoInsCombinationVal,CtgAutoInsDeleteExistCtgs,
+    Duration,CtgAutoInsElementFilter:4,CtgAutoInsElementFilter:2,
+    CtgAutoInsElementFilter:1,CtgAutoInsElementFilter,CtgAutoInsElementFilter:5,
+    CtgAutoInsElementFilter:3,CtgAutoInsElementType,FaultLocation,
+    Include3WXfIfFoundWithXf,IncludeNomVolt,DOCMaxkV,DOCMinkV,MeasType,
+    CtgAutoInsPrefix:5,CtgAutoInsPrefix:3,CtgAutoInsPrefix:2,CtgAutoInsPrefix,
+    CtgAutoInsPrefix:6,CtgAutoInsPrefix:4,CtgAutoInsPrefix:1,
+    CtgAutoInsOnlyIncludeWithin,CtgAutoInsOnlyIncludeWithinBus,
+    CtgAutoInsOnlyIncludeWithinNum,CtgAutoInsOpenBreakers,CtgAutoParallelCommon,
+    StartTime,DOCUseAllkV,CtgAutoInsUseAreaZoneFilters,
+    CtgAutoInsUseElementFilter:4,CtgAutoInsUseElementFilter:2,
+    CtgAutoInsUseElementFilter:1,CtgAutoInsUseElementFilter,
+    CtgAutoInsUseElementFilter:5,CtgAutoInsUseElementFilter:3])
 {
-"AGCToleranceMVA"              "5"
-"AlwaysReport"                 "YES"
-"AlwaysBranchInc"              "999"
-"AlwaysHighVoltInc"            "0.1"
-"AlwaysInterfaceInc"           "999"
-"AlwaysLowVoltDec"             "0.1"
-"NeverReport"                  "NO"
-"NeverBranchInc"               "0"
-"NeverHighVoltInc"             "0"
-"NeverInterfaceInc"            "0"
-"NeverLowVoltDec"              "0"
-"VoltChangePercent"            "NO"
-"MonDiscBus"                   "NO"
-"DisableGenDropOverlap"        "NO"
-"AGCTolerance"                 "0.05"
-"MakeUpPower"                  "Gen Part Factors"
-"TSModelMaxDelay"              "3600"
-"TSModelsTrip"                 ""
-"TSModelsMonitor"              ""
-"DynAssignSlack:0"             "NO"
-"MVAConvergenceTol"            "Default"
-"PUConvergenceTol"             "Default"
-"DisableOptMult:0"             "Default"
-"MaxItr:0"                     "Default"
-"MinVoltILoad:0"               "Default"
-"MinVoltSLoad:0"               "Default"
-"EnforceGenMWLimits:0"         "Default"
-"LTCTapBalance:0"              "Default"
-"ChkPhaseShifters:0"           "Default"
-"ChkSVCs"                      "Default"
-"ChkShunts:0"                  "Default"
-"ChkTaps:0"                    "Default"
-"DisableGenMVRCheck:0"         "Default"
-"ChkVarBackOffImmediately"     "Default"
-"ChkVarImmediately:0"          "Default"
-"MaxItrVoltLoop"               "Default"
-"MinLTCSense:0"                "Default"
-"ModelPSDiscrete:0"           "Default"
-"PreventOscillations:0"        "Default"
-"ShuntInner:0"                 "Default"
+"Higher" "BOTH"     0     0     2 "NO " 0.003333 "" "" "" "SCEG_N-1Buses" "" "" "" "SCEG" "BUS" 10 "INSERT3WXF" "NO " 9999 0 "Num Nodes" "3MT_" "P1_B(N-1)_" "G_" "L_" "SUB_" "S_" "T_" "NO "     0     0.000 "NO " "All" 1 "YES" "YES" "NO " "YES" "NO " "NO " "NO "
 }
 
-DATA (CTG_Options, [CTGTPMonitorOnlySuperBus,CTG_BCVoltSensThreshold,CTG_BCVoltSensMonitorFilter,
-    CTG_BCVoltSensReporting,CTG_AlwaysSaveResults,
-    WhatActuallyOccuredContingencyDescription,CTGSaveInPWB,CTGStoreLODFS,
-    CTG_CalculationMethod,CTGSolutionOptions,OPF_SolutionType,
-    IterateOnActionStatus,AllowAmpLimits,ReactivePowerModel,CtgFileName:1,
-    RetryRobustSolutionProcess,RTCTGAnaMode,CTG_ReportMaxVioPerType,CTG_ReportAll,
-    CTG_ReportBaseCaseOutages,CTG_ReportBranchChangeFlowVio,CTG_ReportBusHighVolt,
-    CTG_ReportBusLowVolt,CTG_ReportBusVoltageExtremes,CTG_ReportCaseSummary,
-    CTG_ReportCondense,CTG_ReportCreateTables,CTG_ReportFieldSeparator,
-    CTG_ReportIDBusBy,CTG_ReportInactiveViolations,
-    CTG_ReportInterfaceChangeFlowVio,CTG_ReportInterfaceFlow,
-    CTG_ReportLargestBranchFlow,CTG_ReportLargestInterfaceFlow,CTG_ReportLineFlow,
-    CTG_ReportMonitoredAreas,CTG_ReportMonitoredZones,CTG_ReportOnlyNonZero,
-    CTG_ReportOnlyViolations,CTG_ReportOptionSettings,CTG_ReportVoltDecreaseVio,
-    CTG_ReportVoltIncreaseVio],AUXDEF,YES)
+SCRIPT
 {
-"YES" 10.000 "" "NO " "NO " "PRETTY NAME_NUMBER" "YES" " 0" "     0" "" NO  "NO " "NO " "     0" "" "NO " NO           9999 "NO " "NO " "NO " "YES" "YES" "NO " "NO " "NO " "NO "  "$"        3 "NO " "NO " "YES" "NO " "NO " "YES" "NO " "NO " "NO " "NO " "NO " "NO " "NO " 
+CTGAUTOINSERT;
 }
 
-DATA (FILTER, [ObjectType,FilterName,FilterLogic,FilterPre,Enabled],,YES)
+DATA (CONTINGENCYELEMENT, [CTGLabel,WhoAmI:1,FilterName,ActionStatus],,YES)
 {
-"Contingency" "No_Violations" "AND" "NO " "YES"
-    <SUBDATA Condition>
-        CTGViol = 0
-    </SUBDATA>
+// Loss of Jasper ST will most likely cause CT to trip also. This is N-1.
+"P1_G_JaspA11" "GEN 370831 1 OPEN" "" CHECK
+"P1_G_JaspA11" "GEN 370832 2 OPEN" "" CHECK
+"P1_G_JaspA11" "GEN 370833 3 OPEN" "" CHECK
+"P1_G_JaspA11" "GEN 370834 4 OPEN" "" CHECK
+// Loss of Urq CT#5 causes ST#1 to trip also. This is N-1.
+"P1_G_Urq581" "GEN 370871 1 OPEN" "" CHECK
+// Loss of Urq CT#6 causes ST#2 to trip also. This is N-1.
+"P1_G_Urq682" "GEN 370876 6 OPEN" "" CHECK
+"P1_G_Urq682" "GEN 370872 2 OPEN" "" CHECK
+}
 
-"Contingency" "SKIPPED" "AND" "NO " "YES"
-    <SUBDATA Condition>
-        CTGSkip startswith "YES"
-    </SUBDATA>
+//Commented out bc this should be handled above:
+//DATA (CONTINGENCY, [CTGLabel,CTGSkip],,YES)
+//
+// Loss of each Jasper CT will most likely cause ST to trip also. This is N-1.
+//
+//"P1_Jasp1&4" "NO "
+//    <SUBDATA CTGElement>
+//        "GEN 370831 1 OPEN" "" CHECK
+//        "GEN 370832 2 OPEN" "" CHECK
+//        "GEN 370833 3 OPEN" "" CHECK
+//        "GEN 370834 4 OPEN" "" CHECK
+//    </SUBDATA>
+//}
 
-"Contingency" "SKIPPED_NoViolations" "AND" "NO " "YES"
+//--------------------------------------------------------------------
+// THE FOLLOWING ARE ADVANCED FILTERS USED BY THE CONTINGENCY AUTO INSERT OPTIONS for inserting TFMRs
+//--------------------------------------------------------------------
+DATA (Filter, [ObjectType,FilterName,FilterLogic,FilterPre,Enabled])
+{
+"Branch" "SCEG_NoRadials" "AND" "NO " "YES"
     <SUBDATA Condition>
-        CTGSkip startswith "YES"
-        CTGViol = 0
+        UseAnotherFilter meets "SCEG"
+        LineCircuit notstartswith "S"
     </SUBDATA>
+}
 
-"Contingency" "NOT_Solved" "AND" "NO " "YES"
-    <SUBDATA Condition>
-        CTGSolved startswith "NO"
-    </SUBDATA>
+//--------------------------------------------------------------------
+//THE FOLLOWING ARE THE CONTINGENCY AUTO INSERT OPTIONS for inserting TFMRs
+//--------------------------------------------------------------------
+DATA (CTG_AutoInsert_Options, [DOCBranchVoltageTreatment,BusIdentifier,CtgAutoInsCombinationVal1:3,
+    CtgAutoInsCombinationVal1:2,CtgAutoInsCombinationVal1,CtgAutoInsCombinationVal,
+    CtgAutoInsDeleteExistCtgs,Duration,
+    CtgAutoInsElementFilter:4,CtgAutoInsElementFilter:2,CtgAutoInsElementFilter:1,
+    CtgAutoInsElementFilter,CtgAutoInsElementFilter:5,CtgAutoInsElementFilter:3,
+    CtgAutoInsElementType,FaultLocation,Include3WXfIfFoundWithXf,IncludeNomVolt,
+    DOCMaxkV,DOCMinkV,MeasType,CtgAutoInsPrefix:5,CtgAutoInsPrefix:3,
+    CtgAutoInsPrefix:2,CtgAutoInsPrefix,CtgAutoInsPrefix:6,CtgAutoInsPrefix:4,
+    CtgAutoInsPrefix:1,CtgAutoInsOnlyIncludeWithin,CtgAutoInsOnlyIncludeWithinBus,
+    CtgAutoInsOnlyIncludeWithinNum,CtgAutoInsOpenBreakers,CtgAutoParallelCommon,
+    StartTime,DOCUseAllkV,CtgAutoInsUseAreaZoneFilters,
+    CtgAutoInsUseElementFilter:4,CtgAutoInsUseElementFilter:2,
+    CtgAutoInsUseElementFilter:1,CtgAutoInsUseElementFilter,
+    CtgAutoInsUseElementFilter:5,CtgAutoInsUseElementFilter:3])
+{
+"Higher" "BOTH"     0     0     0     0 "NO " 0.003333 "" "" "" "SCEG_NoRadials" "" "" "" "TRANSFORMER" 10 "INSERT3WXF" "NO " 9999 0 "Num Nodes" "3MT_" "B_" "G_" "L_" "SUB_" "S_" "P1_T" "NO "     0     0.000 "NO " "All" 1 "YES" "NO " "NO " "NO " "NO " "NO " "NO "
+}
 
-"Contingency" "ViolExist" "AND" "NO " "YES"
-    <SUBDATA Condition>
-        CTGViol > 0
-    </SUBDATA>
+SCRIPT
+{
+CTGAUTOINSERT;
+}
 
-"Contingency" "NotSkipped_NotSolved" "AND" "NO " "YES"
+//--------------------------------------------------------------------
+// THE FOLLOWING ARE ADVANCED FILTERS USED BY THE CONTINGENCY AUTO INSERT OPTIONS for inserting N-1 Shunts
+//--------------------------------------------------------------------
+DATA (FILTER, [ObjectType,Selected,FilterName,FilterLogic,FilterPre,Enabled])
+{
+"Bus" "NO " "SCEG" "AND" "NO " "YES"
     <SUBDATA Condition>
-        CTGSolved startswith "NO"
-        CTGSkip = "NO"
+        AreaName = "SCEG"
     </SUBDATA>
+"Shunt" "NO " "SCEG" "AND" "NO " "YES"
+    <SUBDATA Condition>
+        AreaName = "SCEG"
+    </SUBDATA>
+}
 
-"Contingency" "P1" "AND" "NO " "YES"
-    <SUBDATA Condition>
-        Name contains "P1_"
-        Name notcontains " + "
-    </SUBDATA>
+//--------------------------------------------------------------------
+// THE FOLLOWING ARE THE CONTINGENCY AUTO INSERT OPTIONS for inserting N-1 Shunts. The section above is just a filter that is needed. BKU
+//--------------------------------------------------------------------
+DATA (CTG_AUTOINSERT_OPTIONS, [DOCBranchVoltageTreatment,BusIdentifier,CtgAutoInsCombinationVal1:2,
+    CtgAutoInsCombinationVal,CtgAutoInsCombinationVal1:1,CtgAutoInsDeleteExistCtgs,
+    Duration,CtgAutoInsElementFilter:4,CtgAutoInsElementFilter:2,
+    CtgAutoInsElementFilter:1,CtgAutoInsElementFilter,CtgAutoInsElementFilter:3,
+    CtgAutoInsElementType,FaultLocation,Include3WXfIfFoundWithXf,IncludeNomVolt,
+    DOCMaxkV,DOCMinkV,MeasType,CtgAutoInsPrefix:5,CtgAutoInsPrefix:3,
+    CtgAutoInsPrefix:2,CtgAutoInsPrefix,CtgAutoInsPrefix:4,CtgAutoInsPrefix:1,
+    CtgAutoInsOnlyIncludeWithin,CtgAutoInsOnlyIncludeWithinBus,
+    CtgAutoInsOnlyIncludeWithinNum,CtgAutoInsOpenBreakers,CtgAutoParallelCommon,
+    StartTime,DOCUseAllkV,CtgAutoInsUseAreaZoneFilters,
+    CtgAutoInsUseElementFilter:4,CtgAutoInsUseElementFilter:2,
+    CtgAutoInsUseElementFilter:1,CtgAutoInsUseElementFilter,
+    CtgAutoInsUseElementFilter:3])
+{
+"Higher" "BOTH"     0     0     2 "NO " 0.003333 "" "" "" "SCEG" "" "" "SCEG" "SHUNT" 10 "INSERT3WXF" "NO " 9999 0 "Num Nodes" "3MT_" "B_" "G_" "L_" "P1_S_" "T_" "NO "     0     0.000 "NO " "All" 1 "YES" "YES" "NO " "YES" "NO " "NO " "YES"
+}
 
-"Contingency" "P2" "AND" "NO " "YES"
-    <SUBDATA Condition>
-        Name contains "P2_"
-        Name notcontains " + "
-    </SUBDATA>
-
-"Contingency" "P3/P6" "AND" "NO " "YES"
-    <SUBDATA Condition>
-        Name contains " + "
-        Name notcontains "LT_"
-    </SUBDATA>
-
-"Contingency" "P4/P5" "AND" "NO " "YES"
-    <SUBDATA Condition>
-        Name contains "P4/P5_"
-        Name notcontains " + "
-    </SUBDATA>
-
-"Contingency" "P7" "AND" "NO " "YES"
-    <SUBDATA Condition>
-        Name contains "P7_"
-    </SUBDATA>
-
-"Contingency" "LongTerm" "AND" "NO " "YES" ""
-    <SUBDATA Condition>
-        Name contains " + "
-        Name contains "LT_"
-    </SUBDATA>
+SCRIPT
+{
+CTGAUTOINSERT;
 }
