@@ -1,0 +1,212 @@
+Distributed computing notes
+===========================
+
+Notes from tracing the distributed setup and run code. Line numbers are from
+the current transcription and may move as the files are edited.
+
+
+Confirmed bugs
+==============
+
+Chained comparisons -- NERC TPL CA.vb:1779, 1851, 1866, 1899, 2159,
+2165, 2182, 2219, 2224, 2254, 2377, 2458
+
+    4 <= iterContSet <= 6
+
+VB does not treat this as "between 4 and 6." It evaluates the first comparison
+into a Boolean and then compares that Boolean to 6. With Option Strict Off,
+this part is effectively always true and can send the wrong contingency sets
+through the distributed/extreme-event paths.
+
+Use this everywhere instead:
+
+    iterContSet >= 4 AndAlso iterContSet <= 6
+
+
+First contingency dropped from split batches -- NERC TPL CA.vb:1929, 5707
+
+    If i > ContCount * contsPerFile And
+       i <= (ContCount + 1) * contsPerFile Then
+
+The array starts at index 0, but the first batch starts at index 1. Contingency
+0 never belongs to any batch, and each upper boundary is shifted by one.
+
+    Dim firstIndex As Integer = ContCount * contsPerFile
+    Dim endExclusive As Integer = Math.Min(firstIndex + contsPerFile, contNum)
+
+    If i >= firstIndex AndAlso i < endExclusive Then
+        ' Keep this contingency in this batch.
+    End If
+
+At line 1929, use Convert.ToInt32(TextBoxContsPerFile.Text) as the batch size.
+
+
+Distributed solve can run while unchecked -- NERC TPL CA.vb:2377
+
+    If CheckBoxDistComp.Checked And
+       (contNum - skippedNum) > 200 And
+       RadioButtonScreen.Checked Or
+       (RadioButtonDCwithAC.Checked And
+        (iterContSet = 1 Or 4 <= iterContSet <= 6)) Then
+        output = simAuto.RunScriptCommand("CTGSolveAll(YES);")
+    Else
+        output = simAuto.RunScriptCommand("CTGSolveAll(NO);")
+    End If
+
+The code after Or is not grouped under CheckBoxDistComp.Checked. Selecting
+DC-with-AC can therefore call CTGSolveAll(YES) while distributed computing is
+unchecked. The chained-comparison bug makes this worse.
+
+Something closer to the likely intent:
+
+    Dim screenRun As Boolean =
+        (contNum - skippedNum) > 200 AndAlso RadioButtonScreen.Checked
+    Dim dcRun As Boolean =
+        RadioButtonDCwithAC.Checked AndAlso
+        (iterContSet = 1 OrElse
+         (iterContSet >= 4 AndAlso iterContSet <= 6))
+
+    If CheckBoxDistComp.Checked AndAlso (screenRun OrElse dcRun) Then
+        output = simAuto.RunScriptCommand("CTGSolveAll(YES);")
+    Else
+        output = simAuto.RunScriptCommand("CTGSolveAll(NO);")
+    End If
+
+Need to confirm whether the 200-contingency minimum applies only to screening
+or to the DC-with-AC path too.
+
+
+Removed computer can stay in the AUX -- Build_Dist_Computing_Form.vb:191-202
+
+    If numOfComps > 1 Then
+        ReDim Preserve textBoxes(numOfComps * 5 - 1)
+    Else
+        ReDim textBoxes(0)
+    End If
+
+numOfComps includes localhost, but textBoxes contains five controls only for
+each remote computer. When the count is reduced, the array stays five elements
+too large. An old remote computer row can be saved or written to the AUX.
+
+    If numOfComps > 1 Then
+        ReDim Preserve textBoxes((numOfComps - 1) * 5 - 1)
+    Else
+        ReDim textBoxes(0)
+    End If
+
+
+Validation checks the same box twice -- Build_Dist_Computing_Form.vb:45-52
+
+    If Not IsNumeric(TextBoxCTGNumberPerProcess.Text) Or
+       Not IsNumeric(TextBoxCTGNumberPerProcess.Text) Or
+       Not IsNumeric(TextBoxLocalHostCores.Text) Then
+        MsgBox("Textbox values must be positive integers!")
+        Exit Sub
+    ElseIf TextBoxCTGNumberPerProcess.Text < 1 Or
+           TextBoxCTGNumberPerProcess.Text < 1 Or
+           TextBoxLocalHostCores.Text < 1 Then
+
+TextBoxCTGNumberPerProcess is repeated in both checks. Remote core counts and
+computer names are not validated, so blanks, nonnumbers, zero, or negative
+values can reach DistComputing.aux.
+
+Use Integer.TryParse on every numeric field, require positive counts, and
+require every computer name to be nonblank. Also make sure compNames and
+coreNumbers contain the same number of entries before loading them.
+
+
+Errors creating DistComputing.aux are hidden -- SelectAUXfiles.vb:1409-1423
+
+    Try
+        Build_Dist_Computing_Form.ShowDialog()
+        ' Write DistComputing.aux...
+    Catch ex As Exception
+    End Try
+
+The empty Catch hides missing folders, read-only files, invalid generated text,
+and other failures. The user can continue thinking distribution is configured.
+
+    Catch ex As Exception
+        My.Settings.distCompChecked = False
+        MessageBox.Show("Could not create DistComputing.aux:" &
+                        vbCrLf & ex.Message)
+    End Try
+
+
+Run continues after PowerWorld rejects the AUX -- NERC TPL CA.vb:3992-4012
+
+    output = simAuto.ProcessAuxFile(
+        CurDir() & "\Resources\DistComputing.aux")
+
+    If output(0) <> "" Then
+        TextBoxLog.AppendText("ERROR! ... " & output(0))
+    End If
+
+This logs the error but keeps going. Later code can still call
+CTGSolveAll(YES) even though the distributed configuration was not accepted.
+On failure, either stop the run or explicitly fall back to CTGSolveAll(NO) and
+tell the user it is continuing locally.
+
+
+distCompChecked does not protect anything -- NERC TPL CA.vb:41, 3997;
+SelectAUXfiles.vb:1414; NERC TPL CA.Designer.vb:282-293
+
+    My.Settings.distCompChecked = False
+    My.Settings.distCompChecked = True
+
+    Me.CheckBoxDistComp.Checked = True
+
+The setting is written but never read before CTGSolveAll(YES). Meanwhile, the
+main distributed checkbox starts checked. If distCompChecked is meant to mean
+"setup was validated," the run needs to check it, or use a current-session
+Boolean set only after PowerWorld successfully loads the AUX.
+
+
+Things to check
+===============
+
+AUX file is assembled from UI labels -- Build_Dist_Computing_Form.vb:212-237;
+Build_Dist_Computing_Form.Designer.vb:95-144
+
+    returnDistCompAuxString =
+        Label1.Text &
+        TextBoxCTGNumberPerProcess.Text &
+        Label3.Text &
+        Label4.Text &
+        TextBoxLocalHostCores.Text &
+        Label5.Text & vbCrLf
+
+The PowerWorld file format is partly stored in visible labels. Label3.Text
+comes from a .resx resource, so a designer edit or missing resource can change
+the generated AUX. The current transcription does not include that .resx.
+
+Compare the generated file with Resources/DistComputing.aux. Longer term, move
+the AUX format into constants or a dedicated writer instead of UI controls.
+
+
+CurDir() may use the wrong folder -- SelectAUXfiles.vb:1417;
+NERC TPL CA.vb:4000, 4004
+
+    CurDir() & "\Resources\DistComputing.aux"
+
+CurDir() is the process working directory, which is not always the executable
+directory. This may be fine with the current launch method, but a shortcut or
+different launcher can change it.
+
+Check CurDir() in the real deployment. If Resources belongs beside the EXE,
+use Path.Combine(Application.StartupPath, "Resources", "DistComputing.aux").
+
+
+Check whether distributed settings are saved -- Build_Dist_Computing_Form.vb:54-69;
+NERC TPL CA.vb:55-88
+
+    My.Settings.CTGsPerProcess = TextBoxCTGNumberPerProcess.Text
+    My.Settings.coreNumbers = TextBoxLocalHostCores.Text
+    My.Settings.compNames = "localhost"
+
+The setup form does not call My.Settings.Save(). This may be okay if the
+original project has automatic settings saving enabled. The main form's custom
+save prompt does not watch these three settings.
+
+Check the original Save My Settings on Shutdown option. If it is off, save
+after the user accepts a valid distributed configuration.
