@@ -1,15 +1,15 @@
 DATA (CTG_OPTIONS, [CTG_WhatToDoWithBC, CTG_BCFlows, CTG_BCLowVolt, CTG_BCHighVolt],,YES)
 {
 //CTG_WhatToDoWithBC  BCViolReport  String  'Specify what to do with base case violations. 0 = do not report; 1 = report all; 2 = use change from base case criteria'
-//CTG_BCFlows  BCViolBranchInc  Real  'A base case branch violation will not be re-reported unless the flow increase is above this threshold.'
-//CTG_BCLowVolt  BCViolLowVoltDec  Real  'A base case low voltage violation will not be re-reported unless the voltage decrease is above this threshold.'
-//CTG_BCHighVolt  BCViolHighVoltInc  Real  'A base case high voltage violation will not be re-reported unless the voltage increase is above this threshold.'
+//CTG_BCFlows  BCViolBranchInc  Real  'A base case branch violation will not be re-reported unless the flow increase is above this threshold.
+//CTG_BCLowVolt  BCViolLowVoltDec  Real  'A base case low voltage violation will not be re-reported unless the voltage decrease is above this threshold.
+//CTG_BCHighVolt  BCViolHighVoltInc  Real  'A base case high voltage violation will not be re-reported unless the voltage increase is above this threshold.
   1 0.5 0.005 0.005
 }
 
-//--------------------------------------------------------------------------
+//--------------------------------------------------------------------------------
 // THE FOLLOWING SECTION CONTAINS OPTIONS FOR THE CONTINGENCY ANALYSIS.
-//--------------------------------------------------------------------------
+//--------------------------------------------------------------------------------
 DATA (CTG_Options_Value, [VariableName,ValueField],AUXDEF,YES)
 {
 "AGCToleranceMVA"              "5"
@@ -32,7 +32,7 @@ DATA (CTG_Options_Value, [VariableName,ValueField],AUXDEF,YES)
 "TSModelsTrip"                 ""
 "TSModelsMonitor"              ""
 "DynAssignSlack:0"             "NO"
-"MVACOnvergenceTol"            "Default"
+"MVAConvergenceTol"            "Default"
 "PUConvergenceTol"             "Default"
 "DisableOptMult:0"             "Default"
 "MaxItr:0"                     "Default"
@@ -49,19 +49,19 @@ DATA (CTG_Options_Value, [VariableName,ValueField],AUXDEF,YES)
 "ChkVarImmediately:0"          "Default"
 "MaxItrVoltLoop"               "Default"
 "MinLTCSense:0"                "Default"
-"ModelPSDDiscrete:0"           "Default"
+"ModelPSDiscrete:0"           "Default"
 "PreventOscillations:0"        "Default"
 "ShuntInner:0"                 "Default"
 }
 
 DATA (CTG_Options, [CTGTPMonitorOnlySuperBus,CTG_BCVoltSensThreshold,CTG_BCVoltSensMonitorFilter,
     CTG_BCVoltSensReporting,CTG_AlwaysSaveResults,
-    WhatActuallyOccurredContingencyDescription,CTGSaveInPWB,CTGStoreLODFS,
-    CTG_CalculationMethod,CTGSolutionOptions,OC_SolutionType,
+    WhatActuallyOccuredContingencyDescription,CTGSaveInPWB,CTGStoreLODFS,
+    CTG_CalculationMethod,CTGSolutionOptions,OPF_SolutionType,
     IterateOnActionStatus,AllowAmpLimits,ReactivePowerModel,CtgFileName:1,
-    RetryRobustSolutionProcess,RTCIGAnaMode,CTG_ReportMaxVioPerType,CTG_ReportAll,
+    RetryRobustSolutionProcess,RTCTGAnaMode,CTG_ReportMaxVioPerType,CTG_ReportAll,
     CTG_ReportBaseCaseOutages,CTG_ReportBranchChangeFlowVio,CTG_ReportBusHighVolt,
-    CTG_ReportBusLowVolt,CTG_ReportBusVoltages,CTG_ReportCaseSummary,
+    CTG_ReportBusLowVolt,CTG_ReportBusVoltageExtremes,CTG_ReportCaseSummary,
     CTG_ReportCondense,CTG_ReportCreateTables,CTG_ReportFieldSeparator,
     CTG_ReportIDBusBy,CTG_ReportInactiveViolations,
     CTG_ReportInterfaceChangeFlowVio,CTG_ReportInterfaceFlow,
@@ -70,22 +70,22 @@ DATA (CTG_Options, [CTGTPMonitorOnlySuperBus,CTG_BCVoltSensThreshold,CTG_BCVoltS
     CTG_ReportOnlyViolations,CTG_ReportOptionSettings,CTG_ReportVoltDecreaseVio,
     CTG_ReportVoltIncreaseVio],AUXDEF,YES)
 {
-"YES" 10.000 "" "NO" "NO" "PRETTY NAME_NUMBER" "YES" "0" "" 0 "" "NO" "NO" "NO" 0 "" "NO" "NO" 9999 "NO" "NO" "NO" "YES" "YES" "NO" "NO" "NO" "NO" "+" 3 "NO" "NO" "YES" "NO" "NO" "YES" "NO" "NO" "NO" "NO" "NO"
+"YES" 10.000 "" "NO " "NO " "PRETTY NAME_NUMBER" "YES" " 0" "     0" "" NO  "NO " "NO " "     0" "" "NO " NO           9999 "NO " "NO " "NO " "YES" "YES" "NO " "NO " "NO " "NO "  "$"        3 "NO " "NO " "YES" "NO " "NO " "YES" "NO " "NO " "NO " "NO " "NO " "NO " "NO " 
 }
 
 DATA (FILTER, [ObjectType,FilterName,FilterLogic,FilterPre,Enabled],,YES)
 {
-"Contingency" "No Violations" "AND" "NO " "YES"
+"Contingency" "No_Violations" "AND" "NO " "YES"
     <SUBDATA Condition>
         CTGViol = 0
     </SUBDATA>
 
-"Contingency" "Started" "AND" "NO " "YES"
+"Contingency" "SKIPPED" "AND" "NO " "YES"
     <SUBDATA Condition>
         CTGSkip startswith "YES"
     </SUBDATA>
 
-"Contingency" "Skipped_NoViolations" "AND" "NO " "YES"
+"Contingency" "SKIPPED_NoViolations" "AND" "NO " "YES"
     <SUBDATA Condition>
         CTGSkip startswith "YES"
         CTGViol = 0
@@ -96,21 +96,21 @@ DATA (FILTER, [ObjectType,FilterName,FilterLogic,FilterPre,Enabled],,YES)
         CTGSolved startswith "NO"
     </SUBDATA>
 
-"Contingency" "ViolSol" "AND" "NO " "YES"
+"Contingency" "ViolExist" "AND" "NO " "YES"
     <SUBDATA Condition>
         CTGViol > 0
     </SUBDATA>
 
 "Contingency" "NotSkipped_NotSolved" "AND" "NO " "YES"
     <SUBDATA Condition>
-        CTGSolved startswith "no"
-        CTGSkip = "no"
+        CTGSolved startswith "NO"
+        CTGSkip = "NO"
     </SUBDATA>
 
 "Contingency" "P1" "AND" "NO " "YES"
     <SUBDATA Condition>
         Name contains "P1_"
-        Name notcontains "+"
+        Name notcontains " + "
     </SUBDATA>
 
 "Contingency" "P2" "AND" "NO " "YES"
