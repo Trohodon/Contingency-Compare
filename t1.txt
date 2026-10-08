@@ -1,7 +1,7 @@
 //Start buses with @ symbol (N-1 Buses)
-//--------------------------------------------------------------------
+//--------------------------------------------------------------------------------
 // THE FOLLOWING ARE ADVANCED FILTERS USED BY THE CONTINGENCY AUTO INSERT OPTIONS for inserting N-1 Buses
-//--------------------------------------------------------------------
+//--------------------------------------------------------------------------------
 DATA (FILTER, [ObjectType,Selected,FilterName,FilterLogic,FilterPre,Enabled])
 {
 "Bus" "NO " "SCEG_N-1Buses" "AND" "NO " "YES"
@@ -11,9 +11,9 @@ DATA (FILTER, [ObjectType,Selected,FilterName,FilterLogic,FilterPre,Enabled])
     </SUBDATA>
 }
 
-//--------------------------------------------------------------------
+//--------------------------------------------------------------------------------
 //THE FOLLOWING ARE THE CONTINGENCY AUTO INSERT OPTIONS for inserting N-1 Buses. The section above is just a filter that is needed.
-//--------------------------------------------------------------------
+//--------------------------------------------------------------------------------
 DATA (CTG_AUTOINSERT_OPTIONS, [DOCBranchVoltageTreatment,BusIdentifier,CtgAutoInsCombinationVal1:2,
     CtgAutoInsCombinationVal1:1,CtgAutoInsCombinationVal,CtgAutoInsDeleteExistCtgs,
     Duration,CtgAutoInsElementFilter:4,CtgAutoInsElementFilter:2,
@@ -65,9 +65,9 @@ DATA (CONTINGENCYELEMENT, [CTGLabel,WhoAmI:1,FilterName,ActionStatus],,YES)
 //    </SUBDATA>
 //}
 
-//--------------------------------------------------------------------
+//--------------------------------------------------------------------------------
 // THE FOLLOWING ARE ADVANCED FILTERS USED BY THE CONTINGENCY AUTO INSERT OPTIONS for inserting TFMRs
-//--------------------------------------------------------------------
+//--------------------------------------------------------------------------------
 DATA (Filter, [ObjectType,FilterName,FilterLogic,FilterPre,Enabled])
 {
 "Branch" "SCEG_NoRadials" "AND" "NO " "YES"
@@ -77,9 +77,9 @@ DATA (Filter, [ObjectType,FilterName,FilterLogic,FilterPre,Enabled])
     </SUBDATA>
 }
 
-//--------------------------------------------------------------------
+//--------------------------------------------------------------------------------
 //THE FOLLOWING ARE THE CONTINGENCY AUTO INSERT OPTIONS for inserting TFMRs
-//--------------------------------------------------------------------
+//--------------------------------------------------------------------------------
 DATA (CTG_AutoInsert_Options, [DOCBranchVoltageTreatment,BusIdentifier,CtgAutoInsCombinationVal1:3,
     CtgAutoInsCombinationVal1:2,CtgAutoInsCombinationVal1,CtgAutoInsCombinationVal,
     CtgAutoInsDeleteExistCtgs,Duration,
@@ -103,9 +103,9 @@ SCRIPT
 CTGAUTOINSERT;
 }
 
-//--------------------------------------------------------------------
+//--------------------------------------------------------------------------------
 // THE FOLLOWING ARE ADVANCED FILTERS USED BY THE CONTINGENCY AUTO INSERT OPTIONS for inserting N-1 Shunts
-//--------------------------------------------------------------------
+//--------------------------------------------------------------------------------
 DATA (FILTER, [ObjectType,Selected,FilterName,FilterLogic,FilterPre,Enabled])
 {
 "Bus" "NO " "SCEG" "AND" "NO " "YES"
@@ -118,9 +118,9 @@ DATA (FILTER, [ObjectType,Selected,FilterName,FilterLogic,FilterPre,Enabled])
     </SUBDATA>
 }
 
-//--------------------------------------------------------------------
+//--------------------------------------------------------------------------------
 // THE FOLLOWING ARE THE CONTINGENCY AUTO INSERT OPTIONS for inserting N-1 Shunts. The section above is just a filter that is needed. BKU
-//--------------------------------------------------------------------
+//--------------------------------------------------------------------------------
 DATA (CTG_AUTOINSERT_OPTIONS, [DOCBranchVoltageTreatment,BusIdentifier,CtgAutoInsCombinationVal1:2,
     CtgAutoInsCombinationVal,CtgAutoInsCombinationVal1:1,CtgAutoInsDeleteExistCtgs,
     Duration,CtgAutoInsElementFilter:4,CtgAutoInsElementFilter:2,
