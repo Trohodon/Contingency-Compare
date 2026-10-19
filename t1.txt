@@ -1,0 +1,1 @@
+py -m PyInstaller --noconfirm --clean --onedir --windowed --contents-directory . --name ContingencyComparaterV2 --icon="ContingencyComparaterV2\assets\app.ico" --splash="ContingencyComparaterV2\assets\splash.png" --add- data="ContingencyComparaterV2\assets;assets" "ContingencyComparaterV2\ContingencyComparaterV2.py"
