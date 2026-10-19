@@ -1,212 +1,123 @@
-"""Distributed-computing configuration and contingency batching."""
+"""Small JSON-backed replacement for the legacy My.Settings values."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass, field
+import json
 import os
 from pathlib import Path
-import platform
-import socket
-import subprocess
-from typing import Iterator, Sequence
+
+from .aux_files import empty_aux_selections
+from .distributed import DistributedComputer, DistributedConfig, is_local_computer_name
 
 
-@dataclass(frozen=True, slots=True)
-class DistributedComputer:
-    name: str
-    connections: int
-
-    def validate(self) -> None:
-        name = self.name.strip()
-        if not name:
-            raise ValueError("Every distributed computer needs a name.")
-        if any(character in name for character in ('"', "\r", "\n")):
-            raise ValueError(f"Invalid computer name: {self.name!r}")
-        if self.connections < 1:
-            raise ValueError(f"Cores/workers for {name} must be at least 1.")
-
-
-@dataclass(frozen=True, slots=True)
-class ComputerVerification:
-    reachable: bool | None
-    message: str
+DISTRIBUTED_DEFAULTS_VERSION = 1
+DISTRIBUTED_COMPUTERS_V1 = (
+    ("localhost", 2),
+    ("CYCPWJTDist01V", 1),
+    ("IDCPWATDHC10v", 1),
+    ("IDCPWATDHC11v", 1),
+    ("IDCPWATDHC12v", 1),
+    ("IDCPWATDHC13v", 1),
+    ("IDCPWATDHC14v", 1),
+    ("CYCPWATDHC20v", 1),
+    ("CYCPWATDHC21v", 1),
+    ("CYCPWATDHC22v", 1),
+    ("CYCPWATDHC23v", 1),
+    ("CYCPWATDHC24v", 1),
+)
 
 
-def is_local_computer_name(name: str) -> bool:
-    computer = name.strip().casefold()
-    local_names = {
-        "localhost",
-        ".",
-        socket.gethostname().casefold(),
-        socket.getfqdn().casefold(),
-        os.environ.get("COMPUTERNAME", "").casefold(),
-    }
-    return computer in local_names
+def default_distributed_computers() -> list[dict[str, object]]:
+    return [{"name": name, "cores": cores} for name, cores in DISTRIBUTED_COMPUTERS_V1]
 
 
-@dataclass(frozen=True, slots=True)
-class PowerWorldComputerStatus:
-    """One computer row returned by PowerWorld's distributed verification."""
-
-    name: str
-    available: bool
-    requested_workers: int
-    detected_cores: int
-    errors: int
-
-
-def _as_int(value: object) -> int:
-    try:
-        return int(float(str(value).strip()))
-    except (TypeError, ValueError):
-        return 0
+def _merge_distributed_computers(
+    existing: list[dict[str, object]],
+    additions: tuple[tuple[str, int], ...],
+) -> list[dict[str, object]]:
+    """Append newly introduced defaults without replacing user-edited workers."""
+    merged = [dict(item) for item in existing]
+    known = {str(item.get("name", "")).strip().casefold() for item in merged}
+    for name, cores in additions:
+        if name.casefold() not in known:
+            merged.append({"name": name, "cores": cores})
+            known.add(name.casefold())
+    return merged
 
 
-def parse_powerworld_computer_statuses(result: object) -> tuple[PowerWorldComputerStatus, ...]:
-    """Parse the detailed table requested after PowerWorld verifies its workers."""
-    try:
-        columns = result[1]  # type: ignore[index]
-        names, availability, requested, detected, error_counts = columns
-        rows = zip(names, availability, requested, detected, error_counts)
-    except (IndexError, TypeError, ValueError) as exc:
-        raise ValueError("PowerWorld returned an unexpected distributed-computer list.") from exc
+@dataclass(slots=True)
+class AppSettings:
+    simulator_version: int = 24
+    dc_monitor_percent: int = 80
+    ac_monitor_percent: int = 90
+    contingencies_per_file: int = 80_000
+    use_model_build: bool = False
+    use_distributed: bool = True
+    use_multiple_computers: bool = True
+    extreme_double_bus: bool = False
+    extreme_double_branch: bool = False
+    extreme_bus_branch: bool = False
+    extreme_p1_p7: bool = False
+    contingencies_per_process: int = 100
+    distributed_computers: list[dict[str, object]] = field(
+        default_factory=default_distributed_computers
+    )
+    distributed_defaults_version: int = DISTRIBUTED_DEFAULTS_VERSION
+    aux_files: dict[str, list[dict[str, object]]] = field(default_factory=empty_aux_selections)
 
-    statuses: list[PowerWorldComputerStatus] = []
-    for name, available, requested_workers, detected_cores, errors in rows:
-        statuses.append(
-            PowerWorldComputerStatus(
-                name=str(name).strip(),
-                available=str(available).strip().casefold() in {"yes", "true", "1"},
-                requested_workers=_as_int(requested_workers),
-                detected_cores=_as_int(detected_cores),
-                errors=_as_int(errors),
+    def distributed_config(self) -> DistributedConfig:
+        configured = tuple(
+            DistributedComputer(
+                name=str(item.get("name", "")),
+                # Read old settings files that used the confusing "connections" label.
+                connections=int(item.get("cores", item.get("connections", 0))),
+            )
+            for item in self.distributed_computers
+        )
+        computers = (
+            configured
+            if self.use_multiple_computers
+            else tuple(
+                computer for computer in configured if is_local_computer_name(computer.name)
             )
         )
-    return tuple(statuses)
+        if not computers and not self.use_multiple_computers:
+            raise ValueError(
+                "Local-only distributed mode requires a localhost computer row."
+            )
+        return DistributedConfig(self.contingencies_per_process, computers)
 
 
-def verify_computer(
-    name: str,
-    timeout_seconds: float = 2.0,
-    *,
-    runner=subprocess.run,
-    system_name: str | None = None,
-) -> ComputerVerification:
-    """Do a quick reachability check without requiring PowerWorld or SimAuto."""
-    computer = name.strip()
-    if not computer:
-        return ComputerVerification(None, "Blank - ignored when running")
+class SettingsStore:
+    def __init__(self, base_dir: Path | None = None) -> None:
+        if base_dir is None:
+            root = os.environ.get("LOCALAPPDATA") or os.environ.get("APPDATA")
+            base_dir = Path(root) / "NERC_TPL_CA_PY" if root else Path.home() / ".nerc_tpl_ca_py"
+        self.base_dir = base_dir
+        self.path = base_dir / "settings.json"
+        self.distributed_aux_path = base_dir / "DistComputing.aux"
 
-    if is_local_computer_name(computer):
-        return ComputerVerification(True, "Ready - this computer")
+    def load(self) -> AppSettings:
+        if not self.path.exists():
+            return AppSettings()
+        try:
+            raw = json.loads(self.path.read_text(encoding="utf-8"))
+            allowed = AppSettings.__dataclass_fields__.keys()
+            settings = AppSettings(**{key: value for key, value in raw.items() if key in allowed})
+            loaded_version = int(raw.get("distributed_defaults_version", 0))
+            if loaded_version < 1:
+                settings.distributed_computers = _merge_distributed_computers(
+                    settings.distributed_computers,
+                    DISTRIBUTED_COMPUTERS_V1,
+                )
+            settings.distributed_defaults_version = DISTRIBUTED_DEFAULTS_VERSION
+            return settings
+        except (OSError, TypeError, ValueError, json.JSONDecodeError):
+            return AppSettings()
 
-    current_system = system_name or platform.system()
-    milliseconds = max(250, int(timeout_seconds * 1000))
-    if current_system == "Windows":
-        command = ["ping", "-n", "1", "-w", str(milliseconds), computer]
-    else:
-        command = ["ping", "-c", "1", "-W", str(max(1, round(timeout_seconds))), computer]
-    try:
-        completed = runner(
-            command,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            timeout=timeout_seconds + 1,
-            check=False,
-        )
-    except (OSError, subprocess.SubprocessError):
-        return ComputerVerification(False, "Could not run network check")
-    if completed.returncode == 0:
-        return ComputerVerification(True, "Reachable")
-    return ComputerVerification(False, "No reply - offline or ping is blocked")
-
-
-def parse_powerworld_verification(result: object) -> dict[str, ComputerVerification]:
-    """Translate SimAuto's distributed-computer table into GUI status messages."""
-    try:
-        columns = result[1]  # type: ignore[index]
-        names, availability, core_counts, error_counts = columns
-        rows = zip(names, availability, core_counts, error_counts)
-    except (IndexError, TypeError, ValueError) as exc:
-        raise ValueError("PowerWorld returned an unexpected distributed-computer list.") from exc
-
-    verified: dict[str, ComputerVerification] = {}
-    for name, available, cores, errors in rows:
-        computer = str(name).strip()
-        is_available = str(available).strip().casefold() in {"yes", "true", "1"}
-        if is_available:
-            try:
-                detected = int(float(str(cores)))
-            except ValueError:
-                detected = 0
-            detail = f"PowerWorld ready - {detected} core(s) found" if detected else "PowerWorld ready"
-        else:
-            error_text = str(errors).strip()
-            detail = "PowerWorld unavailable"
-            if error_text and error_text != "0":
-                detail += f" - {error_text} error(s)"
-        verified[computer.casefold()] = ComputerVerification(is_available, detail)
-    return verified
-
-
-@dataclass(frozen=True, slots=True)
-class DistributedConfig:
-    contingencies_per_process: int
-    computers: tuple[DistributedComputer, ...]
-
-    def validate(self) -> None:
-        if self.contingencies_per_process < 1:
-            raise ValueError("Contingencies per process must be at least 1.")
-        if not self.computers:
-            raise ValueError("At least one distributed computer is required.")
-        for computer in self.computers:
-            computer.validate()
-
-
-def render_distributed_aux(config: DistributedConfig) -> str:
-    """Build PowerWorld's distributed-options AUX text without using UI labels."""
-    config.validate()
-
-    lines = [
-        "DATA (DISTRIBUTED_OPTIONS, [ATCUseDistributedComputing,CTGUseDistributedComputing,DistMasterPasswordHash,",
-        "    CTGNumberPerProcess])",
-        "{",
-        f'"NO " "YES" "" {config.contingencies_per_process}',
-        "}",
-        "",
-        "//--------------------------------------------------------------------------------",
-        "// THE FOLLOWING SECTION CONTAINS OPTIONS FOR DISTRIBUTED COMPUTING.",
-        "//--------------------------------------------------------------------------------",
-        "DATA (DISTRIBUTEDCOMPUTER, [CustomExpression,CustomExpression:1,Selected,NumberOfConnections,",
-        "    NumberOfConnections:1,DSServerName,Enabled,Enabled:1,DistNumErrors,",
-        "    DistMaxErrors,DistAuthInfoStored,DistAuthInfo,DistAuthInfo:1,DistAuthInfo:2,",
-        "    CustomExpressionStr,CustomExpressionStr:1])",
-        "{",
-    ]
-    for computer in config.computers:
-        lines.append(
-            f'"" "" "NO " {computer.connections} 0 "{computer.name.strip()}" '
-            '"YES" "Unknown" 0 1 "NO " "" "" "" "" ""'
-        )
-    lines.extend(("}", ""))
-    return "\n".join(lines)
-
-
-def write_distributed_aux(path: Path, config: DistributedConfig) -> Path:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(render_distributed_aux(config), encoding="utf-8", newline="\n")
-    return path
-
-
-def contingency_batch_bounds(total: int, batch_size: int) -> Iterator[tuple[int, int]]:
-    """Yield zero-based [start, end) bounds without dropping boundary items."""
-    if total < 0:
-        raise ValueError("Total contingencies cannot be negative.")
-    if batch_size < 1:
-        raise ValueError("Batch size must be at least 1.")
-    for start in range(0, total, batch_size):
-        yield start, min(start + batch_size, total)
-
-
-def split_sequence(values: Sequence[str], batch_size: int) -> list[list[str]]:
-    return [list(values[start:end]) for start, end in contingency_batch_bounds(len(values), batch_size)]
+    def save(self, settings: AppSettings) -> None:
+        self.base_dir.mkdir(parents=True, exist_ok=True)
+        temporary = self.path.with_suffix(".tmp")
+        temporary.write_text(json.dumps(asdict(settings), indent=2), encoding="utf-8")
+        temporary.replace(self.path)
