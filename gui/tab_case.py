@@ -14,7 +14,6 @@ from core.column_blacklist import (
 class CaseProcessingTab(ttk.Frame):
     """
     GUI tab for:
-      - Single case processing
       - Folder scan + processing of normal and Extreme Events cases
       - Multi-folder mode: each subfolder is a scenario to compare
     """
@@ -25,7 +24,6 @@ class CaseProcessingTab(ttk.Frame):
         self.local_log = None
         self.external_log_func = None
 
-        self.pwb_path = tk.StringVar(value="No .pwb file selected")
         self.folder_path = tk.StringVar(value="No folder selected")
 
         # For single-folder mode: label -> full path
@@ -59,27 +57,8 @@ class CaseProcessingTab(ttk.Frame):
     # ───────────── GUI layout ───────────── #
 
     def _build_gui(self):
-        top = ttk.LabelFrame(self, text="Single case processing")
-        top.pack(side=tk.TOP, fill=tk.X, padx=10, pady=10)
-
-        ttk.Label(top, text="Selected .pwb case:").grid(row=0, column=0, sticky="w")
-        ttk.Label(top, textvariable=self.pwb_path, width=80).grid(
-            row=1, column=0, columnspan=2, sticky="w"
-        )
-
-        ttk.Button(top, text="Browse .pwb…", command=self.browse_pwb).grid(
-            row=1, column=2, padx=(5, 0)
-        )
-
-        self.single_btn = ttk.Button(
-            top,
-            text="Process selected .pwb (export + filter)",
-            command=self.run_export_single,
-        )
-        self.single_btn.grid(row=2, column=0, columnspan=3, pady=(8, 0), sticky="w")
-
         folder = ttk.LabelFrame(self, text="Folder processing (normal / Extreme Events cases)")
-        folder.pack(side=tk.TOP, fill=tk.BOTH, expand=False, padx=10, pady=5)
+        folder.pack(side=tk.TOP, fill=tk.BOTH, expand=False, padx=10, pady=10)
 
         ttk.Label(folder, text="Selected folder:").grid(row=0, column=0, sticky="w")
         ttk.Label(folder, textvariable=self.folder_path, width=80).grid(
@@ -237,7 +216,6 @@ class CaseProcessingTab(ttk.Frame):
     def _set_running(self, running: bool):
         self._is_running = running
         state = "disabled" if running else "normal"
-        self.single_btn.configure(state=state)
         self.process_folder_btn.configure(state=state)
         self.update_idletasks()
         self.update()
@@ -279,64 +257,6 @@ class CaseProcessingTab(ttk.Frame):
             self.log("\nErrors deleting some filtered CSVs:")
             for p, err in errors:
                 self.log(f"  ERROR deleting {p}: {err}")
-
-    # ───────────── Single-case callbacks ───────────── #
-
-    def browse_pwb(self):
-        path = filedialog.askopenfilename(
-            title="Select PowerWorld case (.pwb)",
-            filetypes=[("PowerWorld case", "*.pwb"), ("All files", "*.*")],
-        )
-        if path:
-            self.pwb_path.set(path)
-            self.log(f"Selected case: {path}")
-
-    def run_export_single(self):
-        if self._is_running:
-            messagebox.showinfo("Busy", "Processing is already running. Please wait for it to finish.")
-            return
-
-        pwb = self.pwb_path.get()
-        if not pwb.lower().endswith(".pwb") or not os.path.exists(pwb):
-            messagebox.showwarning("No case selected", "Please select a valid .pwb file.")
-            return
-
-        cats = self._get_row_filter_categories()
-        self.log("\n=== Processing single case ===")
-        if not cats:
-            self.log("WARNING: No LimViolCat categories selected. Row filter will be skipped.")
-
-        threshold = self._get_effective_threshold()
-        if threshold is None:
-            return
-
-        self._set_running(True)
-        try:
-            self.update_idletasks()
-            self.update()
-
-            filtered_csv = process_case(
-                pwb,
-                dedup_enabled=self.max_filter_var.get(),
-                keep_categories=cats,
-                delete_original=self.delete_original_var.get(),
-                log_func=self.log,
-                threshold=threshold,
-                skip_voltage_46_33kv=(
-                    self.report_type_var.get() == "voltage"
-                    and self.skip_voltage_46_33kv_var.get()
-                ),
-            )
-        except Exception as e:
-            self.log(f"ERROR: {e}")
-            messagebox.showerror("Error", str(e))
-        else:
-            if filtered_csv:
-                messagebox.showinfo("Done", f"Processing complete.\nFiltered CSV:\n{filtered_csv}")
-            else:
-                messagebox.showwarning("Done", "Processing finished, but no filtered CSV was created.")
-        finally:
-            self._set_running(False)
 
     # ───────────── Folder callbacks ───────────── #
 
