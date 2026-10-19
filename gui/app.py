@@ -10,7 +10,7 @@ from gui.help_view import HelpTab  # NEW
 
 APP_TITLE = "Contingency Comparison Tool"
 APP_SUBTITLE = "PowerWorld Results Export + Compare"
-APP_VERSION = "v1.0"
+APP_VERSION = "v2.0"
 
 
 class App(ttk.Frame):
