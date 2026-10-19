@@ -1,0 +1,5 @@
+$env:PATH += ";C:\Program Files (x86)\WiX Toolset v3.14\bin"
+New-Item -ItemType Directory -Force "ContingencyComparaterV2\installer\obj" | Out-Null
+heat.exe dir "dist\ContingencyComparaterV2" -nologo -cg AppFiles -dr INSTALLFOLDER -ag -scom -sreg -sfrag -srd -var var.SourceDir -out "ContingencyComparaterV2\installer\Files.wxs"
+candle.exe -nologo -arch x64 -ext WixUIExtension -dSourceDir="dist\ContingencyComparaterV2" -dProjectDir="ContingencyComparaterV2" -out ContingencyComparaterV2\installer\obj\ "ContingencyComparaterV2\installer\Product.wxs" "ContingencyComparaterV2\installer\Files.wxs"
+light.exe -nologo -ext WixUIExtension -cultures:en-us -out "ContingencyComparaterV2\installer\ContingencyComparaterV2-2.0.0-x64.msi" "ContingencyComparaterV2\installer\obj\Product.wixobj" "ContingencyComparaterV2\installer\obj\Files.wixobj"
