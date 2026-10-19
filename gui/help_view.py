@@ -395,7 +395,7 @@ class HelpTab(ttk.Frame):
                 ("h1", "Version / Contact"),
                 ("p", "Tool name: Contingency Comparator"),
                 ("p", "Purpose: PowerWorld ViolationCTG export + compare"),
-                ("p", "Version: v2.x"),
+                ("p", "Version: v2.0"),
                 ("code", "Team: Transmission Planning\nNotes: TBD"),
             ],
         }
