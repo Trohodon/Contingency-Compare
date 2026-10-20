@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import sys
+import tempfile
 import tkinter as tk
 
 
@@ -28,6 +29,35 @@ def _set_windows_appusermodelid(app_id: str = "Dominion.DCC.ContingencyComparato
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
     except Exception:
         pass
+
+
+def _configure_frozen_win32com_cache() -> None:
+    """Keep pywin32's generated COM cache out of the installed program folder."""
+    if os.name != "nt" or not getattr(sys, "frozen", False):
+        return
+
+    cache_root = os.environ.get("LOCALAPPDATA") or tempfile.gettempdir()
+    gen_path = os.path.join(
+        cache_root,
+        "Dominion Energy",
+        "Contingency Comparison Tool",
+        "win32com",
+        "gen_py",
+        f"{sys.version_info.major}.{sys.version_info.minor}",
+    )
+    os.makedirs(gen_path, exist_ok=True)
+
+    init_path = os.path.join(gen_path, "__init__.py")
+    if not os.path.exists(init_path):
+        with open(init_path, "w", encoding="utf-8") as stream:
+            stream.write("# Generated PowerWorld COM cache. Safe to delete.\n")
+
+    import win32com
+
+    win32com.__gen_path__ = gen_path
+    generated_package = sys.modules.get("win32com.gen_py")
+    if generated_package is not None:
+        generated_package.__path__ = [gen_path]
 
 
 def _pyi_splash_update(text: str) -> None:
@@ -85,6 +115,7 @@ def _set_app_icon(root: tk.Tk) -> None:
 
 def main() -> None:
     _set_windows_appusermodelid()
+    _configure_frozen_win32com_cache()
 
     if "--menu-one" in sys.argv:
         _close_pyinstaller_splash()
